@@ -50,3 +50,32 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Binary folder
+bin/
+
+# LaTeX files
+*.pdf
+*.aux
+*.glo
+*.idx
+*.log
+*.toc
+*.ist
+*.acn
+*.acr
+*.alg
+*.bbl
+*.blg
+*.dvi
+*.glg
+*.gls
+*.ilg
+*.ind
+*.lof
+*.lot
+*.maf
+*.mtc
+*.mtc1
+*.out
+*.synctex.gz
