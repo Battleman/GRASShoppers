@@ -6,7 +6,10 @@
 
 #include <stdio.h>
 
-extern int tests_run;
+
+
+extern unsigned int tests_run;
+extern unsigned int tests_ok;
 
 #define mu_assert(message, test) do { \
     if (!(test)) { \
@@ -15,15 +18,19 @@ extern int tests_run;
 } while (0)
 
 #define mu_run_test(test, name) do { \
-    char * message; \
+    char *message; \
     test_head(name); \
     message = test(); \
     tests_run++; \
     if (message) { \
-        return message; \
+        test_error(message); \
     } \
-    test_end; \
+    else { \
+        tests_ok++; \
+        test_end; \
+    } \
 } while (0)
 
-#define test_head(name) printf("Test %s:\n",name);
-#define test_end printf("\t[OK]\n");
+#define test_head(name) do { printf("Test %s:\t",name); } while (0)
+#define test_end do { printf("[OK]\n"); } while (0)
+#define test_error(message) do { printf("[FAILED]\n%s\n", message); } while(0)

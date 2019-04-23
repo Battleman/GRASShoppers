@@ -10,30 +10,38 @@
 #include <stdio.h>
 #include "minunit.h"
 
-/* assert TESTS_NUMBER < MAX_INT */
-#define TESTS_NUMBER 0
+#include "test_connect.h"
+#include "test_grass.h"
 
-int (*tests[TESTS_NUMBER])() = {};
+
+
+#define TESTS_NUMBER 2
+
+void (*tests[TESTS_NUMBER]) (void) = {
+    connect_all_tests, grass_all_tests
+};
+
+unsigned int tests_run = 0;
+unsigned int tests_ok = 0;
 
 /*
- *  Runs all_tests() functions.
+ * Runs *_all_tests() functions.
  *
- * @Return: 0 (all tests passed), 1 (one test failed)
+ * @return
+ *   0 (all tests passed), 1 (at least one test failed).
  */
 
-int main(int argc, char *argv[]) {
-    size_t i;
-    unsigned int result;
+int main(void) {
+    size_t i = 0;
 
-    /* runs the tests */
-    result = 0;
+    /* Runs the tests */
     for (i = 0; i < TESTS_NUMBER; ++i) {
-        result += ((*tests[i])() != 0);
+        (*tests[i])();
     }
 
-    /* prints summary */
+    /* Prints summary */
     printf("============================================================\n");
-    printf("Tests run: [%u/%i]\n", TESTS_NUMBER-result, TESTS_NUMBER);
+    printf("Tests run: [%u/%u]\n", tests_ok, tests_run);
 
-    return (result != 0);
+    return (tests_ok != tests_run);
 }
