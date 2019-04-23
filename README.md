@@ -16,7 +16,7 @@ The team tag is GRASShoppers:
 |------------|--------------|
 | `src\`     | Source files |
 | `tst\`     | Test suite |
-| 'bin\'     | Binary folder |
+| `bin\`     | Binary folder |
 | `include\` | Common includes |
 | `report\`  | Project report |
 | `exploit\` | Exploit scripts |
