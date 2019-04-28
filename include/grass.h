@@ -43,9 +43,9 @@ struct Command {
 void hijack_flow();
 
 /*
- * Parses received line into a specified number of tokens.
+ * Splits received line into a specified number of tokens.
  *
- * @parameter cmd
+ * @parameter args
  *   Placeholder array pre-initialized with n_tok elements that will contain
  *   the parsed command and arguments. The last element will always be NULL.
  * @parameter line
@@ -54,7 +54,7 @@ void hijack_flow();
  *   Maximum number of tokens.
  */
 
-void parse_line(char** cmd, char* line, int n_tok);
+void split_args(char **args, char *line, size_t n_tok);
 
 /*
  * Executes parsed line and transfers its output and return status.

@@ -73,7 +73,7 @@ int main(void) {
     int sock = 0, valread = 0;
 
     if ((cmd = calloc(SIZE_ARGS, sizeof(char*))) == NULL) {
-        perror("Tokens allocation failed");
+        perror("Arguments allocation failed");
         exit(EXIT_FAILURE);
     }
 
@@ -90,7 +90,7 @@ int main(void) {
         printf("%s\n", buffer);
 
         /* Tokenizes the line into arguments */
-        parse_line(cmd, buffer, SIZE_ARGS);
+        split_args(cmd, buffer, SIZE_ARGS);
 
         /* Sends command output if correctly executed */
         if (launch(buffer, SIZE_BUFFER, cmd) == 0) {

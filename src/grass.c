@@ -1,6 +1,7 @@
 #include "grass.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -10,17 +11,17 @@ void hijack_flow(){
     printf("Method hijack: Accepted\n");
 }
 
-void parse_line(char** cmd, char* line, int n_tok) {
-    int idx = 0;
+void split_args(char **args, char *line, size_t n_tok) {
+    size_t idx = 0;
     char *token = NULL;
 
     token = strtok(line, TOKENS_DELIM);
     while (token != NULL && idx < (n_tok - 1)) {
-        cmd[idx++] = token;
+        args[idx++] = token;
         token = strtok(NULL, TOKENS_DELIM);
     }
 
-    cmd[idx] = NULL;
+    args[idx] = NULL;
 }
 
 int launch(char *output, int output_len, char **cmd) {
