@@ -93,11 +93,8 @@ int main(void) {
         split_args(cmd, buffer, SIZE_ARGS);
 
         /* Sends command output if correctly executed */
-        if (launch(buffer, SIZE_BUFFER, cmd) == 0) {
-            send(sock, buffer, SIZE_BUFFER, 0);
-        } else {
-            send(sock, MSG_ERROR, MSG_ERROR_LEN, 0);
-        }
+        launch(buffer, SIZE_BUFFER, cmd);
+        send(sock, buffer, SIZE_BUFFER, 0);
 
         /* Loops over */
         memset(buffer, 0, SIZE_BUFFER);
