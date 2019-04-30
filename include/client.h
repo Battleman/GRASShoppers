@@ -12,6 +12,6 @@
 #define PORT 31337
 
 #define SIZE_BUFFER 1024
-#define FORMAT_SCANF "%1023[0-9a-zA-Z ]"
+#define FORMAT_SCANF "%1023[ -~]" /* from ' ' to '~' (all ASCII printables) */
 
 #endif /* CLIENT_H */
