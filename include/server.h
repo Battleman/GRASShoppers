@@ -12,8 +12,6 @@
 
 #define MSG_WELCOME "Welcome to GRASShoppersh!\n"
 #define MSG_WELCOME_LEN 26
-#define MSG_ERROR "error"
-#define MSG_ERROR_LEN 6
 
 #define SIZE_BUFFER 1024
 #define SIZE_ARGS 16
