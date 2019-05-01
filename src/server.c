@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 static struct Command **cmdlist;
 static int numCmds;
 
@@ -77,6 +78,8 @@ int main(void) {
 
     /* Creates socket */
     sock = accept_sock(port);
+    get_ip(buffer, SIZE_BUFFER, sock);
+    printf("Client accepted.\nIP: %s\n", buffer);
 
     /* Sends welcome message */
     send(sock, MSG_WELCOME, MSG_WELCOME_LEN, 0);
