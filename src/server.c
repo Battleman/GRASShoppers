@@ -75,8 +75,6 @@ int main(void) {
     /* Initializes server */
     parse_conf_file(FILENAME_CONFIG);
 
-    return 0;
-
     /* Creates socket */
     sock = accept_sock(port);
 

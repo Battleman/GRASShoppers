@@ -9,7 +9,7 @@
 #define CLIENT_H
 
 #define IP_ADDR "127.0.0.1"
-#define PORT 31337
+#define PORT 1337
 
 #define SIZE_BUFFER 1024
 #define FORMAT_SCANF "%1023[ -~]" /* from ' ' to '~' (all ASCII printables) */
