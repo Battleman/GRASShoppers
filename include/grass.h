@@ -8,8 +8,6 @@
 #ifndef GRASS_H
 #define GRASS_H
 
-#define DEBUG true
-
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -25,11 +23,24 @@
 
 
 
+#define DEBUG true
+
+#define SIZE_BUFFER 1024
+#define SIZE_ARGS 16
+#define SIZE_USERS 16
+
 #define TOKENS_DELIM " \t\r\n" 
 
+enum ConfigID { BASE, PORT, USER };
+
+struct ConfigVar {
+    const char *keyword;
+    const enum ConfigID id;
+};
+
 struct User {
-    const char* uname;
-    const char* pass;
+    const char name[SIZE_BUFFER];
+    const char pass[SIZE_BUFFER];
 
     bool isLoggedIn;
 };
@@ -40,7 +51,16 @@ struct Command {
     const char* params;
 };
 
-void hijack_flow();
+void hijack_flow(void);
+
+/*
+ * Parses given configuration file into global variables.
+ *
+ * @parameter filename
+ *   Path to the configuration file (typically, "grass.conf").
+ */
+
+void parse_conf_file(char const *filename);
 
 /*
  * Splits received line into a specified number of tokens.

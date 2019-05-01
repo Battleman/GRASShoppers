@@ -8,8 +8,76 @@
 
 
 
-void hijack_flow(){
+/* ============================ GLOBAL VARIABLES ============================ */
+#define SIZE_VARCONFS 3
+static const struct ConfigVar conf_vars[SIZE_VARCONFS] = {
+    {"base", BASE},
+    {"port", PORT},
+    {"user", USER}
+};
+
+const char base[SIZE_BUFFER];
+const int port;
+
+const struct User users[SIZE_USERS];
+int n_users = 0;
+
+/* =============================== FUNCTIONS ================================ */
+
+static void parse_conf_var(char *line, struct ConfigVar conf) {
+    char format[SIZE_BUFFER] = {0};
+    strcat(format, conf.keyword);
+
+    switch (conf.id) {
+        case BASE:
+            strcat(format, " %1023[A-Za-z0-9 ./\\-_]");
+            sscanf(line, format, base);
+            break;
+        case PORT:
+            strcat(format, " %d\n");
+            sscanf(line, format, &port);
+            break;
+        case USER:
+            if (n_users < SIZE_USERS) {
+                strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
+                sscanf(line, format, users[n_users].name, users[n_users].pass);
+                n_users++;
+            } else {
+                perror("Too many users.");
+            }
+            break;
+        default:
+            return;
+    }
+}
+
+void hijack_flow(void) {
     printf("Method hijack: Accepted\n");
+}
+
+void parse_conf_file(char const *filename) {
+    char buffer[SIZE_BUFFER] = {0};
+    size_t i = 0;
+    FILE *fp = NULL;
+
+    if ((fp = fopen(filename, "r")) == NULL) {
+        perror("Failed opening config file.");
+        exit(EXIT_FAILURE);
+    }
+
+    while (fgets(buffer, SIZE_BUFFER, fp)) {
+        buffer[SIZE_BUFFER-1] = '\0';
+        /* If not a comment, checks if match with a configuration variable */
+        if (buffer[0] != '#') {
+            for (i = 0; i < SIZE_VARCONFS; ++i) {
+                if (strstr(buffer, conf_vars[i].keyword)) {
+                    parse_conf_var(buffer, conf_vars[i]);
+                }
+            }
+        }
+    }
+
+    fclose(fp);
 }
 
 void split_args(char **args, char *line, size_t n_tok) {

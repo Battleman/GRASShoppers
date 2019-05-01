@@ -11,9 +11,14 @@
 #include <stdio.h>
 
 
+
 #define TEST_SIZE_ARGS 8
 #define TEST_SIZE_LINE 64
 
+extern const char base[SIZE_BUFFER];
+extern const int port;
+extern const struct User users[SIZE_USERS];
+extern int n_users;
 
 static char* test_split_args(void) {
     char **args;
@@ -65,11 +70,34 @@ static char* test_split_args(void) {
     mu_assert("Special characters test failed (at 0).", strcmp(args[0], line) == 0);
     mu_assert("Special characters test failed (at 1).", args[1] == NULL);
 
+    free(args);
+
+    return NULL; /* Success */
+}
+
+static char* test_parse_conf_file(void) {
+    parse_conf_file("tst/test.conf");
+
+    /* ============================= Basic test ============================= */
+    mu_assert("Base parsing failed.", strcmp(base, "./test/path/to/folder") == 0);
+    mu_assert("Port parsing failed.", port == 2019);
+    mu_assert("User name parsing failed (at 0).", strcmp(users[0].name, "ABC") == 0);
+    mu_assert("User pass parsing failed (at 0).", strcmp(users[0].pass, "DEF") == 0);
+    mu_assert("User name parsing failed (at 1).", strcmp(users[1].name, "012") == 0);
+    mu_assert("User pass parsing failed (at 1).", strcmp(users[1].pass, "345") == 0);
+    mu_assert("User name parsing failed (at 2).", strcmp(users[2].name, "A_1") == 0);
+    mu_assert("User pass parsing failed (at 2).", strcmp(users[2].pass, "@\"|") == 0);
+    mu_assert("User name parsing failed (at 3).", n_users == 3);
+
+    /* =========================== Outliers tests =========================== */
+
+
     return NULL; /* Success */
 }
 
 void grass_all_tests(void) {
     printf("\n=======================  GRASS tests  ======================\n\n");
     mu_run_test(test_split_args, "split_args()");
+    mu_run_test(test_parse_conf_file, "parse_conf_file()");
     printf("\n");
 }

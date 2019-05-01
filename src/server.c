@@ -13,11 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static struct User **userlist;
-static int numUsers;
 static struct Command **cmdlist;
 static int numCmds;
 
+extern int port;
 
 
 /* Helper function to run commands in unix. */
@@ -63,10 +62,6 @@ static int numCmds;
 
 }*/
 
-/* Parse the grass.conf file and fill in the global variables */
-/*void parse_grass() {
-}*/
-
 int main(void) {
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
@@ -77,8 +72,13 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    /* Initializes server */
+    parse_conf_file(FILENAME_CONFIG);
+
+    return 0;
+
     /* Creates socket */
-    sock = accept_sock(PORT);
+    sock = accept_sock(port);
 
     /* Sends welcome message */
     send(sock, MSG_WELCOME, MSG_WELCOME_LEN, 0);

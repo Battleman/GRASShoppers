@@ -8,12 +8,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#define PORT 31337
-
 #define MSG_WELCOME "Welcome to GRASShoppersh!\n"
 #define MSG_WELCOME_LEN 26
 
-#define SIZE_BUFFER 1024
-#define SIZE_ARGS 16
+#define FILENAME_CONFIG "grass.conf"
 
 #endif /* SERVER_H */
