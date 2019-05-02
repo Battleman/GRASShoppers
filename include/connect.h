@@ -8,6 +8,15 @@
 #ifndef CONNECT_H
 #define CONNECT_H
 
+#include "grass.h"
+
+struct FileLoading {
+    int sock;
+    char ipv4_addr[16];
+    int port;
+    char filename[SIZE_BUFFER];
+    unsigned long size;
+};
 
 /*
  * Accepts new connections and transfers its socket.
@@ -50,5 +59,31 @@ int connect_sock(char const *ip_addr, int port);
  */
 
 void get_ip(char *ip_addr, int n_ip, int sock);
+
+/*
+ * Receives content from socket and writes it in a file.
+ *
+ * @parameter fload
+ *   Structure containing all parameters for file receiving. The structure is
+ *   supposed correct.
+ *
+ * @return
+ *   1 (True) if file could have been received errorless, 0 (False) otherwise.
+ */
+
+int recv_file(struct FileLoading* fload);
+
+/*
+ * Reads a file and sends its content to a socket.
+ *
+ * @parameter fload
+ *   Structure containing all parameters for file sending. The structure is
+ *   supposed correct.
+ *
+ * @return
+ *   1 (True) if file could have been sent errorless, 0 (False) otherwise.
+ */
+
+int send_file(struct FileLoading* fload);
 
 #endif /* CONNECT_H */
