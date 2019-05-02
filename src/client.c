@@ -16,46 +16,32 @@
 
 
 
-/*
- * Send a file to the server as its own thread
- *
- * fp: file descriptor of file to send
- * d_port: destination port
- */
-/*void send_file(int fp, int d_port) {
-}*/
-
-/*
- * Recv a file from the server as its own thread
- *
- * fp: file descriptor of file to save to.
- * d_port: destination port
- * size: the size (in bytes) of the file to recv
- */
-/*void recv_file(int fp, int d_port, int size) {
-}*/
+#define PRINT_EXHAUSTIVE_READ(valread, buffer, size, pfd) do { \
+    do { \
+        valread = read(pfd.fd, buffer, size-1); \
+        buffer[valread] = '\0'; \
+        printf("%s", buffer); \
+    } while (poll(&pfd, 1, 0) > 0); \
+    printf("\n"); \
+} while (0)
 
 
-/*
- * search all files in the current directory
- * and its subdirectory for the pattern
- *
- * pattern: an extended regular expressions.
- */
-/*void search(char *pattern) {
-}*/
+
 
 int main(void) {
     char buffer[SIZE_BUFFER] = {0};
     int sock = 0, valread = 0;
+    struct pollfd pfd;
 
     /* Connects to server */
     if ((sock = connect_sock(IP_ADDR, PORT)) == -1) {
         exit(EXIT_FAILURE);
     }
+    pfd.fd = sock;
+    pfd.events = POLLRDNORM;
 
     /* Reads welcome message */
-    valread = read(sock, buffer, SIZE_BUFFER);
+    PRINT_EXHAUSTIVE_READ(valread, buffer, SIZE_BUFFER, pfd);
 
     while (valread > 0) {
         /* Main loop */
