@@ -13,55 +13,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-static struct Command **cmdlist;
-static int numCmds;
-
 extern int port;
 
 
-/* Helper function to run commands in unix. */
-/*void run_command(const char* command, int sock){
 
-}*/
+static void *server_get(void* args) {
+    struct FileLoading* fload = (struct FileLoading*) args;
 
+    fload->sock = accept_sock(port);
 
-/*
- * Send a file to the client as its own thread
- *
- * fp: file descriptor of file to send
- * sock: socket that has already been created.
- */
-/*void send_file(int fp, int sock) {
+    send_file(fload);
+    close(fload->sock);
 
-}*/
+    free(fload);
+    return NULL;
+}
 
-/*
- * Send a file to the server as its own thread
- *
- * fp: file descriptor of file to save to.
- * sock: socket that has already been created.
- * size: the size (in bytes) of the file to recv
- */
-/*void recv_file(int fp, int sock, int size) {
+static void *server_put(void* args) {
+    struct FileLoading* fload = (struct FileLoading*) args;
 
-}*/
+    fload->sock = accept_sock(port);
 
-/* Server side REPL given a socket file descriptor */
-/*void * connection_handler(void* sockfd) {
+    recv_file(fload);
+    close(fload->sock);
 
-}*/
-
-/*
- * search all files in the current directory
- * and its subdirectory for the pattern
- *
- * pattern: an extended regular expressions.
- * Output: A line seperated list of matching files' addresses
- */
-/*void search(char *pattern) {
-
-}*/
+    free(fload);
+    return NULL;
+}
 
 int main(void) {
     char buffer[SIZE_BUFFER] = {0};
