@@ -8,6 +8,17 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include <poll.h>
+
+#include "grass.h"
+
+enum ClientCommandID { GET, PUT, EXIT };
+
+struct ClientCommand {
+    const char *keyword;
+    const enum ClientCommandID id;
+};
+
 #define IP_ADDR "127.0.0.1"
 #define PORT 1337
 
