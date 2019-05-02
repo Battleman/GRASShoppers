@@ -8,6 +8,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#define MAX_CLIENTS 16
+
 #define MSG_WELCOME "Welcome to GRASShoppersh!\n"
 #define MSG_WELCOME_LEN 26
 

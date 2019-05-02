@@ -41,23 +41,15 @@ static void *server_put(void* args) {
     return NULL;
 }
 
-int main(void) {
+static void *main_loop(void* args) {
+    int sock = *((int *)args), valread = 0;
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
-    int sock = 0, valread = 0;
 
     if ((cmd = calloc(SIZE_ARGS, sizeof(char*))) == NULL) {
-        perror("Arguments allocation failed");
-        exit(EXIT_FAILURE);
+        close(sock);
+        return NULL;
     }
-
-    /* Initializes server */
-    parse_conf_file(FILENAME_CONFIG);
-
-    /* Creates socket */
-    sock = accept_sock(port);
-    get_ip(buffer, SIZE_BUFFER, sock);
-    printf("Client accepted.\nIP: %s\n", buffer);
 
     /* Sends welcome message */
     send(sock, MSG_WELCOME, MSG_WELCOME_LEN, 0);
@@ -71,7 +63,7 @@ int main(void) {
         /* Tokenizes the line into arguments */
         split_args(cmd, buffer, SIZE_ARGS);
 
-        /* Sends command output if correctly executed */
+        /* Sends command output */
         launch(buffer, SIZE_BUFFER, cmd);
         send(sock, buffer, SIZE_BUFFER, 0);
 
@@ -83,6 +75,36 @@ int main(void) {
     /* Cleans up */
     free(cmd);
     close(sock);
+
+    return NULL;
+}
+
+int main(void) {
+    pthread_t clients[MAX_CLIENTS];
+    int *socks;
+    size_t i = 0;
+
+    if ((socks = calloc(MAX_CLIENTS, sizeof(int))) == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    /* Initializes server */
+    parse_conf_file(FILENAME_CONFIG);
+
+    /* Creates socket and launches independent thread */
+    for (i = 0; i < MAX_CLIENTS; ++i) {
+        socks[i] = accept_sock(port);
+        printf("Client accepted.\n");
+        pthread_create(&(clients[i]), NULL, main_loop, &(socks[i]));
+    }
+
+    /* Waits on each of them */
+    for (i = 0; i < MAX_CLIENTS; ++i) {
+        pthread_join(clients[i], NULL);
+    }
+
+    /* Cleans up */
+    free(socks);
 
     return 0;
 }
