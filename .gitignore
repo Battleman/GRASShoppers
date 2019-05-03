@@ -79,3 +79,8 @@ bin/
 *.mtc1
 *.out
 *.synctex.gz
+
+# CLion project files
+.idea/
+CMakeLists.txt
+cmake-build-debug/

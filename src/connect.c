@@ -13,7 +13,8 @@
 #include <string.h>
 #include <unistd.h>
 
-
+#include "connect.h"
+#include "grass.h"
 
 int accept_sock(int port) {
     int server_fd = 0, new_socket = 0;
@@ -59,7 +60,7 @@ int accept_sock(int port) {
     return new_socket;
 }
 
-int connect_sock(char * ip_addr, int port) {
+int connect_sock(char const *ip_addr, int port) {
     int sock = 0;
     struct sockaddr_in serv_addr;
 
@@ -88,4 +89,60 @@ int connect_sock(char * ip_addr, int port) {
     }
 
     return sock;
+}
+
+void get_ip(char *ip_addr, int n_ip, int sock) {
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+
+    if (getpeername(sock, (struct sockaddr*) &addr, &addr_size) == 0) {
+        sscanf(inet_ntoa(addr.sin_addr), "%15[0-9.]", ip_addr);
+    }
+    ip_addr[n_ip - 1] = '\0';
+}
+
+int recv_file(struct FileLoading* fload) {
+    char buffer[SIZE_BUFFER] = {0};
+    int valread = 1;
+    unsigned long total = 0;
+    FILE *fp = NULL;
+
+    /* Opens received file */
+    if ((fp = fopen(fload->filename, "w")) == NULL) {
+        return 0; /* False */
+    }
+
+    /* Reads all file */
+    for (total = 0; valread > 0 && total < fload->size; total += valread) {
+        valread = read(fload->sock, buffer, SIZE_BUFFER-1);
+        valread = fwrite(buffer, 1, valread, fp);
+    }
+
+    /* Cleans up */
+    fclose(fp);
+
+    return valread > 0;
+}
+
+int send_file(struct FileLoading* fload) {
+    char buffer[SIZE_BUFFER] = {0};
+    int valread = 1;
+    unsigned long total = 0;
+    FILE *fp = NULL;
+
+    /* Opens received file */
+    if ((fp = fopen(fload->filename, "r")) == NULL) {
+        return 0; /* False */
+    }
+
+    /* Sends all file */
+    for (total = 0; valread > 0 && total < fload->size; total += valread) {
+        valread = fread(buffer, 1, SIZE_BUFFER-1, fp);
+        valread = send(fload->sock, buffer, valread, 0);
+    }
+
+    /* Cleans up */
+    fclose(fp);
+
+    return valread > 0;
 }

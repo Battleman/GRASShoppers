@@ -8,10 +8,21 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include <poll.h>
+
+#include "grass.h"
+
+enum ClientCommandID { GET, PUT, EXIT };
+
+struct ClientCommand {
+    const char *keyword;
+    const enum ClientCommandID id;
+};
+
 #define IP_ADDR "127.0.0.1"
-#define PORT 31337
+#define PORT 1337
 
 #define SIZE_BUFFER 1024
-#define FORMAT_SCANF "%1023[0-9a-zA-Z ]"
+#define FORMAT_SCANF "%1023[ -~]" /* from ' ' to '~' (all ASCII printables) */
 
 #endif /* CLIENT_H */
