@@ -18,13 +18,10 @@ static int numUsers;
 static struct Command **cmdlist;
 static int numCmds;
 
-
-
 /* Helper function to run commands in unix. */
 /*void run_command(const char* command, int sock){
 
 }*/
-
 
 /*
  * Send a file to the client as its own thread
@@ -67,12 +64,13 @@ static int numCmds;
 /*void parse_grass() {
 }*/
 
-int main(void) {
+int main(void)
+{
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
     int sock = 0, valread = 0;
 
-    if ((cmd = calloc(SIZE_ARGS, sizeof(char*))) == NULL) {
+    if ((cmd = calloc(SIZE_ARGS, sizeof(char *))) == NULL){
         perror("Arguments allocation failed");
         exit(EXIT_FAILURE);
     }
@@ -91,17 +89,25 @@ int main(void) {
 
         /* Tokenizes the line into arguments */
         split_args(cmd, buffer, SIZE_ARGS);
-
-        /* Sends command output if correctly executed */
-        if (launch(buffer, SIZE_BUFFER, cmd) == 0) {
-            send(sock, buffer, SIZE_BUFFER, 0);
-        } else {
+        if (!check_args(cmd, buffer, SIZE_ARGS)){
+            printf("Nope, not valid");
             send(sock, MSG_ERROR, MSG_ERROR_LEN, 0);
-        }
+            valread = 0;
+        } else {
+            /* Sends command output if correctly executed */
+            if (launch(buffer, SIZE_BUFFER, cmd) == 0)
+            {
+                send(sock, buffer, SIZE_BUFFER, 0);
+            }
+            else
+            {
+                send(sock, MSG_ERROR, MSG_ERROR_LEN, 0);
+            }
 
-        /* Loops over */
-        memset(buffer, 0, SIZE_BUFFER);
-        valread = read(sock, buffer, SIZE_BUFFER);
+            /* Loops over */
+            memset(buffer, 0, SIZE_BUFFER);
+            valread = read(sock, buffer, SIZE_BUFFER);
+        }
     }
 
     /* Cleans up */

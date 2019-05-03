@@ -73,3 +73,21 @@ int launch(char *output, int output_len, char **cmd) {
 
     return status;
 }
+
+
+int check_args(char **args, char *line, size_t n_tok){
+    printf(args[0]);
+    if(strcmp(args[0], "exit") == 0){
+        line = "Byby";
+        printf("By friend");
+        return 0;
+    } else{
+        if(strcmp(args[0], "cd")){
+            line = "Ain't gonna cd bro";
+            return 0;
+        } else{
+            return 0;
+        }
+    }
+    return 1;
+}

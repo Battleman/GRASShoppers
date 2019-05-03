@@ -25,7 +25,7 @@
 
 
 
-#define TOKENS_DELIM " \t\r\n" 
+#define TOKENS_DELIM " \t\r\n"
 
 struct User {
     const char* uname;
@@ -72,5 +72,10 @@ void split_args(char **args, char *line, size_t n_tok);
  */
 
 int launch(char *output, int output_len, char **cmd);
+
+/*
+
+*/
+int check_args(char **args, char *line, size_t n_tok);
 
 #endif /* GRASS_H */
