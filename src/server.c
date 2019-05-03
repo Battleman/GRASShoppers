@@ -15,50 +15,18 @@
 
 extern int port;
 
-<<<<<<< HEAD
-/* Helper function to run commands in unix. */
-/*void run_command(const char* command, int sock){
-=======
-
 
 static void *server_get(void* args) {
     struct FileLoading* fload = (struct FileLoading*) args;
->>>>>>> 12aaaea9d91b0b4d4cf2f6e1bf6be1d121498bdb
 
     fload->sock = accept_sock(port);
 
-<<<<<<< HEAD
-/*
- * Send a file to the client as its own thread
- *
- * fp: file descriptor of file to send
- * sock: socket that has already been created.
- */
-/*void send_file(int fp, int sock) {
-
-}*/
-
-/*
- * Send a file to the server as its own thread
- *
- * fp: file descriptor of file to save to.
- * sock: socket that has already been created.
- * size: the size (in bytes) of the file to recv
- */
-/*void recv_file(int fp, int sock, int size) {
-
-}*/
-
-/* Server side REPL given a socket file descriptor */
-/*void * connection_handler(void* sockfd) {
-=======
     send_file(fload);
     close(fload->sock);
 
     free(fload);
     return NULL;
 }
->>>>>>> 12aaaea9d91b0b4d4cf2f6e1bf6be1d121498bdb
 
 static void *server_put(void* args) {
     struct FileLoading* fload = (struct FileLoading*) args;
@@ -72,25 +40,14 @@ static void *server_put(void* args) {
     return NULL;
 }
 
-<<<<<<< HEAD
-int main(void)
-{
-=======
 static void *main_loop(void* args) {
     int sock = *((int *)args), valread = 0;
->>>>>>> 12aaaea9d91b0b4d4cf2f6e1bf6be1d121498bdb
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
 
-<<<<<<< HEAD
-    if ((cmd = calloc(SIZE_ARGS, sizeof(char *))) == NULL){
-        perror("Arguments allocation failed");
-        exit(EXIT_FAILURE);
-=======
     if ((cmd = calloc(SIZE_ARGS, sizeof(char*))) == NULL) {
         close(sock);
         return NULL;
->>>>>>> 12aaaea9d91b0b4d4cf2f6e1bf6be1d121498bdb
     }
 
     /* Sends welcome message */
@@ -104,27 +61,6 @@ static void *main_loop(void* args) {
 
         /* Tokenizes the line into arguments */
         split_args(cmd, buffer, SIZE_ARGS);
-<<<<<<< HEAD
-        if (!check_args(cmd, buffer, SIZE_ARGS)){
-            printf("Nope, not valid");
-            send(sock, MSG_ERROR, MSG_ERROR_LEN, 0);
-            valread = 0;
-        } else {
-            /* Sends command output if correctly executed */
-            if (launch(buffer, SIZE_BUFFER, cmd) == 0)
-            {
-                send(sock, buffer, SIZE_BUFFER, 0);
-            }
-            else
-            {
-                send(sock, MSG_ERROR, MSG_ERROR_LEN, 0);
-            }
-
-            /* Loops over */
-            memset(buffer, 0, SIZE_BUFFER);
-            valread = read(sock, buffer, SIZE_BUFFER);
-        }
-=======
 
         /* Sends command output */
         launch(buffer, SIZE_BUFFER, cmd);
@@ -133,7 +69,6 @@ static void *main_loop(void* args) {
         /* Loops over */
         memset(buffer, 0, SIZE_BUFFER);
         valread = read(sock, buffer, SIZE_BUFFER);
->>>>>>> 12aaaea9d91b0b4d4cf2f6e1bf6be1d121498bdb
     }
 
     /* Cleans up */
