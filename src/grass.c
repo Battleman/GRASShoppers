@@ -6,16 +6,17 @@
 #include <unistd.h>
 #include <poll.h>
 
-
-
 /* ============================ GLOBAL VARIABLES ============================ */
 #define SIZE_VARCONFS 3
 static const struct ConfigVar conf_vars[SIZE_VARCONFS] = {
     {"base", BASE},
     {"port", PORT},
-    {"user", USER}
-};
-
+    {"user", USER}};
+const char *ALL_COMMANDS[NUM_ALLOWED_COMMANDS] = {"ls", "login", "pass",
+                                                  "ping", "cd", "mkdir",
+                                                  "rm", "get", "put",
+                                                  "grep", "date", "whoami",
+                                                  "w", "logout", "exit"};
 const char base[SIZE_BUFFER];
 const int port;
 
@@ -24,53 +25,65 @@ int n_users = 0;
 
 /* =============================== FUNCTIONS ================================ */
 
-static void parse_conf_var(char *line, struct ConfigVar conf) {
+static void parse_conf_var(char *line, struct ConfigVar conf)
+{
     char format[SIZE_BUFFER] = {0};
     strcat(format, conf.keyword);
 
-    switch (conf.id) {
-        case BASE:
-            strcat(format, " %1023[A-Za-z0-9 ./\\-_]");
-            sscanf(line, format, base);
-            break;
-        case PORT:
-            strcat(format, " %d\n");
-            sscanf(line, format, &port);
-            break;
-        case USER:
-            if (n_users < SIZE_USERS) {
-                strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
-                sscanf(line, format, users[n_users].name, users[n_users].pass);
-                n_users++;
-            } else {
-                perror("Too many users.");
-            }
-            break;
-        default:
-            return;
+    switch (conf.id)
+    {
+    case BASE:
+        strcat(format, " %1023[A-Za-z0-9 ./\\-_]");
+        sscanf(line, format, base);
+        break;
+    case PORT:
+        strcat(format, " %d\n");
+        sscanf(line, format, &port);
+        break;
+    case USER:
+        if (n_users < SIZE_USERS)
+        {
+            strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
+            sscanf(line, format, users[n_users].name, users[n_users].pass);
+            n_users++;
+        }
+        else
+        {
+            perror("Too many users.");
+        }
+        break;
+    default:
+        return;
     }
 }
 
-void hijack_flow(void) {
+void hijack_flow(void)
+{
     printf("Method hijack: Accepted\n");
 }
 
-void parse_conf_file(char const *filename) {
+void parse_conf_file(char const *filename)
+{
     char buffer[SIZE_BUFFER] = {0};
     size_t i = 0;
     FILE *fp = NULL;
 
-    if ((fp = fopen(filename, "r")) == NULL) {
+    if ((fp = fopen(filename, "r")) == NULL)
+    {
         perror("Failed opening config file.");
         exit(EXIT_FAILURE);
     }
 
-    while (fgets(buffer, SIZE_BUFFER, fp)) {
-        buffer[SIZE_BUFFER-1] = '\0';
+    while (fgets(buffer, SIZE_BUFFER, fp))
+    {
+        buffer[SIZE_BUFFER - 1] = '\0';
         /* If not a comment, checks if match with a configuration variable */
-        if (buffer[0] != '#') {
-            for (i = 0; i < SIZE_VARCONFS; ++i) {
-                if (strstr(buffer, conf_vars[i].keyword)) {
+        if (buffer[0] != '#')
+        {
+            for (i = 0; i < SIZE_VARCONFS; ++i)
+            {
+                if (strstr(buffer, conf_vars[i].keyword))
+                {
                     parse_conf_var(buffer, conf_vars[i]);
                 }
             }
@@ -80,27 +93,32 @@ void parse_conf_file(char const *filename) {
     fclose(fp);
 }
 
-void split_args(char **args, char *line, size_t n_tok) {
+int split_args(char **args, char *line, size_t n_tok)
+{
     size_t idx = 0;
     char *token = NULL;
 
     token = strtok(line, TOKENS_DELIM);
-    while (token != NULL && idx < (n_tok - 1)) {
+    while (token != NULL && idx < (n_tok - 1))
+    {
         args[idx++] = token;
         token = strtok(NULL, TOKENS_DELIM);
     }
 
     args[idx] = NULL;
+    return idx;
 }
 
-int launch(char *output, int output_len, char **cmd) {
+int launch(char *output, int output_len, char **cmd)
+{
     pid_t pid = 0;
     int status = 0;
     int comm[2];
     struct pollfd pfd;
 
     /* Creates a pipe between forked proceses */
-    if (pipe(comm) == -1) {
+    if (pipe(comm) == -1)
+    {
         perror("Pipe failed");
         return -1; /* Error */
     }
@@ -108,7 +126,8 @@ int launch(char *output, int output_len, char **cmd) {
     /* Forks the command execution */
     pid = fork();
 
-    if (pid == 0) {
+    if (pid == 0)
+    {
         /* Child process */
 
         /* Redirects stdout and stderr to communication link */
@@ -122,11 +141,15 @@ int launch(char *output, int output_len, char **cmd) {
 
         perror("Execution failed");
         exit(EXIT_FAILURE); /* Forces child to die */
-    } else if (pid < 0) {
+    }
+    else if (pid < 0)
+    {
         /* Error forking */
         perror("Fork failed");
         return -1; /* Error */
-    } else {
+    }
+    else
+    {
         /* Parent process */
 
         /* Waits for child to die (#novaxx) */
@@ -135,10 +158,13 @@ int launch(char *output, int output_len, char **cmd) {
         /* Reads communication from child process if available */
         pfd.fd = comm[0];
         pfd.events = POLLRDNORM;
-        if (poll(&pfd, 1, 0) > 0) {
+        if (poll(&pfd, 1, 0) > 0)
+        {
             read(comm[0], output, output_len);
             output[output_len - 1] = '\0';
-        } else {
+        }
+        else
+        {
             output[0] = '\0';
         }
 
@@ -149,20 +175,71 @@ int launch(char *output, int output_len, char **cmd) {
     return status;
 }
 
-
-int check_args(char **args, char *line, size_t n_tok){
-    printf(args[0]);
-    if(strcmp(args[0], "exit") == 0){
-        line = "Byby";
-        printf("By friend");
-        return 0;
-    } else{
-        if(strcmp(args[0], "cd")){
-            line = "Ain't gonna cd bro";
-            return 0;
-        } else{
-            return 0;
+int no_strange_char(char *check_str)
+{
+    const char *invalid_characters = "|;&$()/*#<>=!+%";
+    char *c = check_str;
+    while (*c)
+    {
+        if (strchr(invalid_characters, *c))
+        {
+            return 1;
         }
+        c++;
+    }
+    return 0;
+}
+int check_args(char **args, char *line, size_t num_args)
+{
+    size_t idx = 0;
+    const char *command = args[0];
+    int valid_token = 0;
+    // check no invalid char
+    for (idx = 0; idx < num_args; idx++)
+    {
+        valid_token = no_strange_char(args[idx]);
+        if (valid_token != 0)
+        {
+            return valid_token;
+        }
+        idx++;
+    }
+
+    //check no invalid command
+    for (idx = 0; idx < NUM_ALLOWED_COMMANDS; idx++)
+    {
+        if (strcmp(command, ALL_COMMANDS[idx]) == 0)
+        {
+            break;
+        }
+    }
+    if (idx == NUM_ALLOWED_COMMANDS)
+    {
+        //not an allowed command
+        return 2;
+    }
+
+    //check number of parameters
+    if ((strcmp(command, "ping") + strcmp(command, "ls") +
+         strcmp(command, "date") + strcmp(command, "whoami") +
+         strcmp(command, 'w') + strcmp(command, "logout") +
+         strcmp(command, "exit")) >= 1 &&
+        num_args > 1)
+    {
+        return 3;
+    }
+    if ((strcmp(command, "login") + strcmp(command, "password") +
+         strcmp(command, "cd") + strcmp(command, "mkdir") +
+         strcmp(command, 'rm') + strcmp(command, "grep") +
+         strcmp(command, "get")) >= 1 &&
+        num_args > 2)
+    {
+        return 3;
+    }
+    if (strcmp(command, "put") != 0 &&
+        num_args > 3)
+    {
+        return 3;
     }
     return 1;
 }

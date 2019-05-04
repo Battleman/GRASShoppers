@@ -41,7 +41,7 @@ static void *server_put(void* args) {
 }
 
 static void *main_loop(void* args) {
-    int sock = *((int *)args), valread = 0;
+    int sock = *((int *)args), valread, num_args = 0;
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
 
@@ -60,8 +60,8 @@ static void *main_loop(void* args) {
         printf("%s\n", buffer);
 
         /* Tokenizes the line into arguments */
-        split_args(cmd, buffer, SIZE_ARGS);
-
+        num_args = split_args(cmd, buffer, SIZE_ARGS);
+        check_args(cmd, buffer, num_args);
         /* Sends command output */
         launch(buffer, SIZE_BUFFER, cmd);
         send(sock, buffer, SIZE_BUFFER, 0);

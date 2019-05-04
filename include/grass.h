@@ -21,8 +21,6 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
-
-
 #define DEBUG true
 
 #define SIZE_BUFFER 1024
@@ -31,25 +29,35 @@
 
 #define TOKENS_DELIM " \t\r\n"
 
-enum ConfigID { BASE, PORT, USER };
+enum ConfigID
+{
+    BASE,
+    PORT,
+    USER
+};
 
-struct ConfigVar {
+struct ConfigVar
+{
     const char *keyword;
     const enum ConfigID id;
 };
 
-struct User {
+struct User
+{
     const char name[SIZE_BUFFER];
     const char pass[SIZE_BUFFER];
 
     bool isLoggedIn;
 };
 
-struct Command {
-    const char* cname;
-    const char* cmd;
-    const char* params;
+struct Command
+{
+    const char *cname;
+    const char *cmd;
+    const char *params;
 };
+
+#define NUM_ALLOWED_COMMANDS 15
 
 void hijack_flow(void);
 
@@ -74,7 +82,7 @@ void parse_conf_file(char const *filename);
  *   Maximum number of tokens.
  */
 
-void split_args(char **args, char *line, size_t n_tok);
+int split_args(char **args, char *line, size_t n_tok);
 
 /*
  * Executes parsed line and transfers its output and return status.
@@ -96,6 +104,7 @@ int launch(char *output, int output_len, char **cmd);
 /*
 
 */
-int check_args(char **args, char *line, size_t n_tok);
+int check_args(char **args, char *line, size_t num_args);
 
+int no_strange_char(char *check_string);
 #endif /* GRASS_H */
