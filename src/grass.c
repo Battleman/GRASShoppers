@@ -1,29 +1,57 @@
 #include "grass.h"
+#include "server.h"
+#include "connect.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <poll.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 /* ============================ GLOBAL VARIABLES ============================ */
-#define SIZE_VARCONFS 3
-static const struct ConfigVar conf_vars[SIZE_VARCONFS] = {
+#define SIZE_CONF_VARS 3
+static const struct ConfigVar CONF_VARS[SIZE_CONF_VARS] = {
     {"base", BASE},
     {"port", PORT},
-    {"user", USER}};
-const char *ALL_COMMANDS[NUM_ALLOWED_COMMANDS] = {"ls", "login", "pass",
-                                                  "ping", "cd", "mkdir",
-                                                  "rm", "get", "put",
-                                                  "grep", "date", "whoami",
-                                                  "w", "logout", "exit"};
+    {"user", USER}
+};
+
+#define SIZE_SERVER_COMMANDS 15
+static const struct ServerCommand SERV_CMD[SIZE_SERVER_COMMANDS] = {
+    {"ls", LS, 1, true},
+    {"login", LOGIN, 2, false},
+    {"pass", PASS, 2, false},
+    {"ping", PING, 2, false},
+    {"cd", CD, 2, true},
+    {"mkdir", MKDIR, 2, true},
+    {"rm", RM, 2, true},
+    {"get", SERV_GET, 2, true},
+    {"put", SERV_PUT, 3, true},
+    {"grep", GREP, 2, true},
+    {"date", DATE, 1, true},
+    {"whoami", WHOAMI, 1, true},
+    {"w", W, 1, true},
+    {"logout", LOGOUT, 1, true},
+    {"exit", SERV_EXIT, 1, false}
+};
+
+const char *CHARACTERS_INVALID = "|;&$()/*#<>=!+%";
+
 const char base[SIZE_BUFFER];
 const int port;
 
-const struct User users[SIZE_USERS];
-int n_users = 0;
+struct User **users;
+size_t n_users = 0;
+size_t max_users = SIZE_USERS;
+
+pthread_t *serv_get_thread = NULL;
+pthread_t *serv_put_thread = NULL;
 
 /* =============================== FUNCTIONS ================================ */
+/* Static */
 
 static void parse_conf_var(char *line, struct ConfigVar conf)
 {
@@ -35,21 +63,22 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
     case BASE:
         strcat(format, " %1023[A-Za-z0-9 ./\\-_]");
         sscanf(line, format, base);
+        if (chdir(base) != 0) {
+            perror("Failed changing directory to base folder.");
+        }
         break;
     case PORT:
         strcat(format, " %d\n");
         sscanf(line, format, &port);
         break;
     case USER:
-        if (n_users < SIZE_USERS)
-        {
+        if (n_users < max_users) {
             strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
-            sscanf(line, format, users[n_users].name, users[n_users].pass);
+            sscanf(line, format, (*users)[n_users].name, (*users)[n_users].pass);
             n_users++;
-        }
-        else
-        {
-            perror("Too many users.");
+        } else {
+            max_users *= 2;
+            *users = realloc(*users, max_users*sizeof(struct User));
         }
         break;
     default:
@@ -57,62 +86,10 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
     }
 }
 
-void hijack_flow(void)
-{
-    printf("Method hijack: Accepted\n");
-}
-
-void parse_conf_file(char const *filename)
-{
+static int launch(char **cmd, int sock) {
     char buffer[SIZE_BUFFER] = {0};
-    size_t i = 0;
-    FILE *fp = NULL;
-
-    if ((fp = fopen(filename, "r")) == NULL)
-    {
-        perror("Failed opening config file.");
-        exit(EXIT_FAILURE);
-    }
-
-    while (fgets(buffer, SIZE_BUFFER, fp))
-    {
-        buffer[SIZE_BUFFER - 1] = '\0';
-        /* If not a comment, checks if match with a configuration variable */
-        if (buffer[0] != '#')
-        {
-            for (i = 0; i < SIZE_VARCONFS; ++i)
-            {
-                if (strstr(buffer, conf_vars[i].keyword))
-                {
-                    parse_conf_var(buffer, conf_vars[i]);
-                }
-            }
-        }
-    }
-
-    fclose(fp);
-}
-
-int split_args(char **args, char *line, size_t n_tok)
-{
-    size_t idx = 0;
-    char *token = NULL;
-
-    token = strtok(line, TOKENS_DELIM);
-    while (token != NULL && idx < (n_tok - 1))
-    {
-        args[idx++] = token;
-        token = strtok(NULL, TOKENS_DELIM);
-    }
-
-    args[idx] = NULL;
-    return idx;
-}
-
-int launch(char *output, int output_len, char **cmd)
-{
     pid_t pid = 0;
-    int status = 0;
+    int valread = 1;
     int comm[2];
     struct pollfd pfd;
 
@@ -153,95 +130,301 @@ int launch(char *output, int output_len, char **cmd)
         /* Parent process */
 
         /* Waits for child to die (#novaxx) */
-        waitpid(pid, &status, 0);
+        waitpid(pid, NULL, 0);
 
         /* Reads communication from child process if available */
         pfd.fd = comm[0];
         pfd.events = POLLRDNORM;
-        if (poll(&pfd, 1, 0) > 0)
+        buffer[SIZE_BUFFER - 1] = '\0';
+        while (valread > 0 && poll(&pfd, 1, 0) > 0)
         {
-            read(comm[0], output, output_len);
-            output[output_len - 1] = '\0';
-        }
-        else
-        {
-            output[0] = '\0';
+            valread = read(comm[0], buffer, SIZE_BUFFER-1);
+            valread = send(sock, buffer, valread, 0);
         }
 
         close(comm[0]);
         close(comm[1]);
     }
 
-    return status;
+    return valread;
 }
 
-int no_strange_char(char *check_str)
-{
-    const char *invalid_characters = "|;&$()/*#<>=!+%";
-    char *c = check_str;
-    while (*c)
-    {
-        if (strchr(invalid_characters, *c))
-        {
-            return 1;
+static int no_strange_char(char const *check_str) {
+    char const *c = check_str;
+
+    while (*c) {
+        if (strchr(CHARACTERS_INVALID, *c)) {
+            return SERV_CMD_ERR_INVALID;
         }
         c++;
     }
+
     return 0;
 }
-int check_args(char **args, char *output, size_t len_output, size_t num_args)
+
+static void *server_get(void* args) {
+    struct FileLoading* fload = (struct FileLoading*) args;
+
+    fload->sock = accept_sock(port);
+
+    send_file(fload);
+    close(fload->sock);
+
+    free(fload);
+    return NULL;
+}
+
+static void *server_put(void* args) {
+    struct FileLoading* fload = (struct FileLoading*) args;
+
+    fload->sock = accept_sock(port);
+
+    recv_file(fload);
+    close(fload->sock);
+
+    free(fload);
+    return NULL;
+}
+
+/* =============================== FUNCTIONS ================================ */
+/* Global */
+
+void hijack_flow(void)
+{
+    printf("Method hijack: Accepted\n");
+}
+
+void parse_conf_file(char const *filename)
+{
+    char buffer[SIZE_BUFFER] = {0};
+    size_t i = 0;
+    FILE *fp = NULL;
+
+    if ((fp = fopen(filename, "r")) == NULL)
+    {
+        perror("Failed opening config file.");
+        exit(EXIT_FAILURE);
+    }
+
+    *users = calloc(max_users, sizeof(struct User));
+
+    while (fgets(buffer, SIZE_BUFFER, fp))
+    {
+        buffer[SIZE_BUFFER - 1] = '\0';
+        /* If not a comment, checks if match with a configuration variable */
+        if (buffer[0] != '#')
+        {
+            for (i = 0; i < SIZE_CONF_VARS; ++i)
+            {
+                if (strstr(buffer, CONF_VARS[i].keyword))
+                {
+                    parse_conf_var(buffer, CONF_VARS[i]);
+                }
+            }
+        }
+    }
+
+    fclose(fp);
+}
+int split_args(char **args, char *line, size_t n_tok)
 {
     size_t idx = 0;
-    const char *command = args[0];
-    int valid_token = 0;
-    // check no invalid char
-    for (idx = 0; idx < num_args; idx++)
+    char *token = NULL;
+
+    token = strtok(line, TOKENS_DELIM);
+    while (token != NULL && idx < (n_tok - 1))
     {
-        valid_token = no_strange_char(args[idx]);
-        if (valid_token != 0)
+        args[idx++] = token;
+        token = strtok(NULL, TOKENS_DELIM);
+    }
+
+    args[idx] = NULL;
+    return idx;
+}
+
+int check_args(char **args, struct User* user, size_t n_args) {
+    size_t idx = 0;
+    const char *command = args[0];
+    int err = 0;
+
+    /* Checks for invalid char */
+    for (idx = 0; idx < n_args; idx++) {
+        err = no_strange_char(args[idx]);
+        if (err != 0)
         {
-            strncpy(output, "Invalid character in command", len_output);
-            return valid_token;
+            return err;
         }
         idx++;
     }
 
-    //check no invalid command
-    for (idx = 0; idx < NUM_ALLOWED_COMMANDS; idx++)
-    {
-        if (strcmp(command, ALL_COMMANDS[idx]) == 0)
-        {
-            break;
+    /* Checks for invalid command */
+    for (idx = 0; idx < SIZE_SERVER_COMMANDS; idx++) {
+        if (strcmp(command, SERV_CMD[idx].keyword) == 0) {
+            if (n_args == SERV_CMD[idx].n_params) {
+                if (SERV_CMD[idx].privileged && (user == NULL || !user->logged)) {
+                    return SERV_CMD_ERR_UNAUTHORIZED; /* Unauthorized command */
+                }
+                return idx; /* Correct command and aguments */
+            } else {
+                return SERV_CMD_ERR_PARAMS; /* Invalid number of arguments */
+            }
         }
     }
-    if (idx == NUM_ALLOWED_COMMANDS)
-    {
-        //not an allowed command
-        strncpy(output, "Command not allowed", len_output);
-        return 2;
-    }
 
-    //check number of parameters
-    if ((strcmp(command, "ping") == 0 || strcmp(command, "ls") == 0 ||
-         strcmp(command, "date") == 0 || strcmp(command, "whoami") == 0 ||
-         strcmp(command, "w") == 0 || strcmp(command, "logout") == 0 ||
-         strcmp(command, "exit") == 0) && num_args != 1)
-    {
-        strncpy(output, "This command can't have arguments", len_output);
-        return 3;
+    return SERV_CMD_ERR_UNKNOWN; /* Invalid command */
+}
+
+int execute(char **args, size_t idx, struct User **user, int sock) {
+    char buffer[SIZE_BUFFER] = {0};
+    struct FileLoading *fload = NULL;
+    struct stat st;
+    size_t i = 0;
+    int valread = 0;
+
+    switch (idx) {
+    case GREP:
+        /* Hacks command to match output */
+        args[2] = "-d";
+        args[3] = "skip";
+        args[4] = "-l";
+        args[5] = "*";
+        args[6] = NULL;
+        return launch(args, sock);
+
+    case LS:
+        /* Hacks command to match output */
+        args[1] = "-l";
+        args[2] = NULL;
+        return launch(args, sock);
+
+    case PING:
+        /* Hacks command to match output */
+        args[2] = "-c1";
+        args[3] = NULL;
+        return launch(args, sock);
+
+    case LOGIN:
+        /* Fails if already logged in */
+        if ((*user) != NULL && (*user)->logged) {
+            return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+        }
+
+        /* Checks if user exists and prepares struct */
+        for (i = 0; i < n_users; ++i) {
+            if (strcmp((*users)[i].name, args[1]) == 0 && !((*users)[i].logged)) {
+                (*user) = &((*users)[i]);
+                return send(sock, "\0", 1, 0);
+            }
+        }
+
+        return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+
+    case PASS:
+        /* Fails if already logged in */
+        if ((*user) != NULL && (*user)->logged) {
+            return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+        }
+
+        /* Checks password */
+        if (strcmp((*user)->pass, args[1]) == 0) {
+            (*user)->logged = true;
+            return send(sock, "\0", 1, 0);
+        }
+        return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+    case W:
+        /* Checks all users if logged */
+        for (i = 0, valread = 0; i < n_users; ++i) {
+            if ((*users)[i].logged) {
+                valread += send(sock, (*users)[i].name, strlen((*users)[i].name), 0);
+            }
+        }
+
+        if (valread == 0) {
+            return send(sock, "\0", 1, 0);
+        }
+
+        return valread;
+    case LOGOUT:
+        (*user)->logged = false;
+
+        return send(sock, "\0", 1, 0);
+    case SERV_GET:
+        /* Blocks if serv_get_thread exists. */
+        if (serv_get_thread == NULL) {
+            serv_get_thread = malloc(sizeof(pthread_t));
+        } else {
+            pthread_join(*serv_get_thread, NULL);
+        }
+
+        /* Checks that file exists and recovers its size */
+        if (stat(args[1], &st) != 0) {
+            free(serv_get_thread);
+            serv_get_thread = NULL;
+            return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+        }
+
+        /* Prepares thread */
+        fload = malloc(sizeof(struct FileLoading));
+        strncpy(fload->filename, args[1], SIZE_BUFFER-1);
+        fload->filename[SIZE_BUFFER-1] = '\0';
+        fload->port = PORT_FILE_LOADING;
+        fload->size = st.st_size;
+
+        pthread_create(serv_get_thread, NULL, server_get, fload);
+
+        /* Prepares response */
+        snprintf(buffer, SIZE_BUFFER-1, "get port: %d size: %lu", fload->port, fload->size);
+        buffer[SIZE_BUFFER-1] = '\0';
+
+        return send(sock, buffer, strlen(buffer), 0);
+
+    case SERV_PUT:
+        /* Blocks if serv_put_thread exists. */
+        if (serv_put_thread == NULL) {
+            serv_put_thread = malloc(sizeof(pthread_t));
+        } else {
+            pthread_join(*serv_put_thread, NULL);
+        }
+
+        /* Prepares thread */
+        fload = malloc(sizeof(struct FileLoading));
+        strncpy(fload->filename, args[1], SIZE_BUFFER-1);
+        fload->filename[SIZE_BUFFER-1] = '\0';
+        fload->port = PORT_FILE_LOADING;
+        fload->size = strtoul(args[2], NULL, 10);
+
+        pthread_create(serv_put_thread, NULL, server_put, fload);
+
+        /* Prepares response */
+        snprintf(buffer, SIZE_BUFFER-1, "put port: %d", fload->port);
+        buffer[SIZE_BUFFER-1] = '\0';
+
+        return send(sock, buffer, strlen(buffer), 0);
+
+    case CD:
+        if (chdir(args[1]) != 0) {
+            return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+        }
+        return send(sock, "\0", 1, 0);
+
+    case MKDIR:
+    case RM:
+    case DATE:
+        return launch(args, sock);
+    case WHOAMI:
+        return send(sock, (*user)->name, strlen((*user)->name), 0);
+
+    case SERV_EXIT:
+        return -1;
+
+    case SERV_CMD_ERR_UNAUTHORIZED:
+        return send(sock, ERR_UNAUTHORIZED, strlen(ERR_UNAUTHORIZED), 0);
+    case SERV_CMD_ERR_PARAMS:
+        return send(sock, ERR_PARAMS, strlen(ERR_PARAMS), 0);
+    case SERV_CMD_ERR_INVALID:
+        return send(sock, ERR_INVALID, strlen(ERR_INVALID), 0);
+    case SERV_CMD_ERR_UNKNOWN:
+    default:
+        return send(sock, ERR_UNKNOWN, strlen(ERR_UNKNOWN), 0);
     }
-    if ((strcmp(command, "login")  == 0 || strcmp(command, "password") == 0 ||
-         strcmp(command, "cd") == 0 || strcmp(command, "mkdir") == 0 ||
-         strcmp(command, "rm") == 0 || strcmp(command, "grep") == 0 ||
-         strcmp(command, "get")== 0 )&& num_args != 2)
-    {
-        strncpy(output, "This command needs exactly 1 arguments", len_output);
-        return 3;
-    }
-    if (strcmp(command, "put") == 0  && num_args != 3)
-    {
-        strncpy(output, "This command needs exactly 2 arguments", len_output);
-        return 3;
-    }
-    return 0;
 }
