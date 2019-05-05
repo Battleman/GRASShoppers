@@ -71,7 +71,7 @@ void get_ip(char *ip_addr, int n_ip, int sock);
  *   1 (True) if file could have been received errorless, 0 (False) otherwise.
  */
 
-int recv_file(struct FileLoading* fload);
+int recv_file(struct FileLoading *fload);
 
 /*
  * Reads a file and sends its content to a socket.
@@ -84,6 +84,6 @@ int recv_file(struct FileLoading* fload);
  *   1 (True) if file could have been sent errorless, 0 (False) otherwise.
  */
 
-int send_file(struct FileLoading* fload);
+int send_file(struct FileLoading *fload);
 
 #endif /* CONNECT_H */

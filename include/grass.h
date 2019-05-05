@@ -121,6 +121,6 @@ int execute(char **args, size_t idx, struct User **user, int sock);
  *      -3:           Tokens contain invalid characters.
  */
 
-int check_args(char **args, struct User* user, size_t num_args);
+int check_args(char **args, struct User *user, size_t n_args);
 
 #endif /* GRASS_H */

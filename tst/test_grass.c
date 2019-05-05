@@ -20,7 +20,7 @@ extern const int port;
 extern const struct User users[SIZE_USERS];
 extern int n_users;
 
-static char* test_split_args(void) {
+static char *test_split_args(void) {
     char **args;
     char line[TEST_SIZE_LINE] = {0};
 
@@ -75,7 +75,7 @@ static char* test_split_args(void) {
     return NULL; /* Success */
 }
 
-static char* test_parse_conf_file(void) {
+static char *test_parse_conf_file(void) {
     parse_conf_file("tst/test.conf");
 
     /* ============================= Basic test ============================= */

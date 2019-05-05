@@ -12,12 +12,12 @@
 
 
 
-static char* test_connect_sock(void) {
+static char *test_connect_sock(void) {
 
     return NULL;
 }
 
-static char* test_accept_sock(void) {
+static char *test_accept_sock(void) {
 
     return NULL;
 }

@@ -16,6 +16,8 @@
 #include "connect.h"
 #include "grass.h"
 
+
+
 int accept_sock(int port) {
     int server_fd = 0, new_socket = 0;
     struct sockaddr_in address;
@@ -35,7 +37,7 @@ int accept_sock(int port) {
         return -1;
     }
 
-    /* Configures address and binds socket to it*/
+    /* Configures address and binds socket to it */
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
@@ -82,8 +84,7 @@ int connect_sock(char const *ip_addr, int port) {
     }
 
     /* Connects to the server address */
-    if (connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-    {
+    if (connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("Socket connection error.");
         return -1;
     }
@@ -96,12 +97,12 @@ void get_ip(char *ip_addr, int n_ip, int sock) {
     socklen_t addr_size = sizeof(struct sockaddr_in);
 
     if (getpeername(sock, (struct sockaddr*) &addr, &addr_size) == 0) {
-        sscanf(inet_ntoa(addr.sin_addr), "%15[0-9.]", ip_addr);
+        strncpy(ip_addr, inet_ntoa(addr.sin_addr), n_ip - 1);
     }
     ip_addr[n_ip - 1] = '\0';
 }
 
-int recv_file(struct FileLoading* fload) {
+int recv_file(struct FileLoading *fload) {
     char buffer[SIZE_BUFFER] = {0};
     int valread = 1;
     unsigned long total = 0;
@@ -124,7 +125,7 @@ int recv_file(struct FileLoading* fload) {
     return valread > 0;
 }
 
-int send_file(struct FileLoading* fload) {
+int send_file(struct FileLoading *fload) {
     char buffer[SIZE_BUFFER] = {0};
     int valread = 1;
     unsigned long total = 0;

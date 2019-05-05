@@ -40,8 +40,8 @@ pthread_t *cli_put_thread = NULL;
 
 /* =============================== FUNCTIONS ================================ */
 
-static void *client_get(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
+static void *client_get(void *args) {
+    struct FileLoading *fload = (struct FileLoading*) args;
 
     if ((fload->sock = connect_sock(fload->ipv4_addr, fload->port)) == -1) {
         free(fload);
@@ -55,8 +55,8 @@ static void *client_get(void* args) {
     return NULL;
 }
 
-static void *client_put(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
+static void *client_put(void *args) {
+    struct FileLoading *fload = (struct FileLoading*) args;
 
     if ((fload->sock = connect_sock(fload->ipv4_addr, fload->port)) == -1) {
         free(fload);
@@ -70,10 +70,10 @@ static void *client_put(void* args) {
     return NULL;
 }
 
-static int client_parse_command(char const * command, struct ClientCommand cmd, struct pollfd pfd) {
+static int client_parse_command(char const *command, struct ClientCommand cmd, struct pollfd pfd) {
     char format[SIZE_BUFFER] = {0}, output[SIZE_BUFFER] = {0};
     int valread = 0;
-    struct FileLoading* fload = NULL;
+    struct FileLoading *fload = NULL;
 
     strcat(format, cmd.keyword);
     switch (cmd.id) {
@@ -145,7 +145,7 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
     }
 }
 
-static int send_command(char * buffer, struct pollfd pfd) {
+static int send_command(char *buffer, struct pollfd pfd) {
     int valread = 0;
     size_t i = 0;
 
