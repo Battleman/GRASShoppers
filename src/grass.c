@@ -196,6 +196,54 @@ static void *server_put(void *args)
     return NULL;
 }
 
+static int search_pattern(char **args, int sock) {
+    struct dirent *in_file;
+    size_t max_args = SIZE_ARGS;
+    size_t i = 0;
+    int output = 0;
+    char **command = NULL;
+    DIR *FD = NULL;
+
+    /* Opens directory */
+    if ((FD = opendir(".")) == NULL) {
+        return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+    }
+
+    /* Hacks command to match output */
+    command = calloc(max_args, sizeof(char*));
+    command[0] = "grep";
+    command[1] = args[1];
+    command[2] = "-d";
+    command[3] = "skip";
+    command[4] = "-lnr";
+
+    /* Reads all file */
+    i = 5;
+    while ((in_file = readdir(FD))) {
+        if (strcmp(in_file->d_name, ".") != 0 && strcmp(in_file->d_name, "..") != 0) {
+            if (i >= max_args) {
+                max_args *= 2;
+                command = realloc(command, max_args*sizeof(char*));
+            }
+            command[i] = calloc(SIZE_BUFFER, sizeof(char));
+            strncpy(command[i], in_file->d_name, SIZE_BUFFER);
+            i++;
+        }
+    }
+
+    max_args = i;
+
+    output = launch(command, sock);
+
+    for (i = 5; i < max_args; ++i) {
+        free(command[i]);
+    }
+    free(command);
+    closedir(FD);
+
+    return output;
+}
+
 /* =============================== FUNCTIONS ================================ */
 /* Global */
 
@@ -237,8 +285,8 @@ void parse_conf_file(char const *filename)
 
     fclose(fp);
 }
-int split_args(char **args, char *line, size_t n_tok)
-{
+
+int split_args(char **args, char *line, size_t n_tok) {
     size_t idx = 0;
     char *token = NULL;
 
@@ -293,66 +341,18 @@ int check_args(char **args, struct User *user, size_t n_args)
     return SERV_CMD_ERR_UNKNOWN; /* Invalid command */
 }
 
-int get_all_filenames(char **all_filenames, char *directory, size_t max_filenames)
-{
-    struct dirent *in_file;
-    size_t counter = 0;
-    DIR *FD = opendir(directory);
-    if (FD == NULL)
-    {
-        return 0;
-    }
-
-    while ((in_file = readdir(FD)) && counter < max_filenames)
-    {
-        if (!strcmp(in_file->d_name, "."))
-            continue;
-        if (!strcmp(in_file->d_name, ".."))
-            continue;
-        all_filenames[counter] = calloc(strlen(in_file->d_name) + strlen(directory) + 1, sizeof(char *));
-        strcpy(all_filenames[counter], in_file->d_name);
-        counter++;
-    }
-    return counter;
-}
-
 int execute(char **args, size_t idx, struct User **user, int sock)
 {
-    printf("Executing...\n");
-    fflush(stdout);
     char buffer[SIZE_BUFFER] = {0};
     struct FileLoading *fload = NULL;
     struct stat st;
     size_t i = 0;
-    size_t num_files = 0;
-    int output = 0;
     int valread = 0;
-    char **all_filenames = calloc(300, sizeof(char *));
 
     switch (idx)
     {
     case GREP:
-        num_files = get_all_filenames(all_filenames, ".", 300);
-        if (num_files == 0)
-        {
-            return 0;
-        }
-        /* Hacks command to match output */
-        args[0] = "grep";
-        // args[1] = pattern
-        args[2] = "-d";
-        args[3] = "skip";
-        args[4] = "-lnr";
-        for (i = 0; i < num_files; i++)
-        {
-            args[i + 5] = all_filenames[i];
-        }
-        args[i + 5] = NULL;
-        output = launch(args, sock);
-        for(i=0; i < num_files; i++)
-            free(all_filenames[i]);
-        free(all_filenames);
-        return output;
+        return search_pattern(args, sock);
 
     case LS:
         /* Hacks command to match output */
