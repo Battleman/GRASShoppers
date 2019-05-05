@@ -28,6 +28,7 @@
 #define SIZE_USERS 16
 
 #define TOKENS_DELIM " \t\r\n"
+#define NUM_ALLOWED_COMMANDS 15
 
 enum ConfigID
 {
@@ -57,7 +58,6 @@ struct Command
     const char *params;
 };
 
-#define NUM_ALLOWED_COMMANDS 15
 
 void hijack_flow(void);
 
@@ -104,7 +104,7 @@ int launch(char *output, int output_len, char **cmd);
 /*
 
 */
-int check_args(char **args, char *line, size_t num_args);
+int check_args(char **args, char *output, size_t len_output, size_t num_args);
 
 int no_strange_char(char *check_string);
 #endif /* GRASS_H */

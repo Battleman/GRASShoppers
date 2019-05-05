@@ -61,9 +61,10 @@ static void *main_loop(void* args) {
 
         /* Tokenizes the line into arguments */
         num_args = split_args(cmd, buffer, SIZE_ARGS);
-        check_args(cmd, buffer, num_args);
-        /* Sends command output */
-        launch(buffer, SIZE_BUFFER, cmd);
+        if(check_args(cmd, buffer, SIZE_BUFFER, num_args) == 0){
+            /* Sends command output */
+            launch(buffer, SIZE_BUFFER, cmd);
+        }
         send(sock, buffer, SIZE_BUFFER, 0);
 
         /* Loops over */

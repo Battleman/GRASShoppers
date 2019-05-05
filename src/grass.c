@@ -189,7 +189,7 @@ int no_strange_char(char *check_str)
     }
     return 0;
 }
-int check_args(char **args, char *line, size_t num_args)
+int check_args(char **args, char *output, size_t len_output, size_t num_args)
 {
     size_t idx = 0;
     const char *command = args[0];
@@ -200,6 +200,7 @@ int check_args(char **args, char *line, size_t num_args)
         valid_token = no_strange_char(args[idx]);
         if (valid_token != 0)
         {
+            strncpy(output, "Invalid character in command", len_output);
             return valid_token;
         }
         idx++;
@@ -216,30 +217,31 @@ int check_args(char **args, char *line, size_t num_args)
     if (idx == NUM_ALLOWED_COMMANDS)
     {
         //not an allowed command
+        strncpy(output, "Command not allowed", len_output);
         return 2;
     }
 
     //check number of parameters
-    if ((strcmp(command, "ping") + strcmp(command, "ls") +
-         strcmp(command, "date") + strcmp(command, "whoami") +
-         strcmp(command, 'w') + strcmp(command, "logout") +
-         strcmp(command, "exit")) >= 1 &&
-        num_args > 1)
+    if ((strcmp(command, "ping") == 0 || strcmp(command, "ls") == 0 ||
+         strcmp(command, "date") == 0 || strcmp(command, "whoami") == 0 ||
+         strcmp(command, "w") == 0 || strcmp(command, "logout") == 0 ||
+         strcmp(command, "exit") == 0) && num_args != 1)
     {
+        strncpy(output, "This command can't have arguments", len_output);
         return 3;
     }
-    if ((strcmp(command, "login") + strcmp(command, "password") +
-         strcmp(command, "cd") + strcmp(command, "mkdir") +
-         strcmp(command, 'rm') + strcmp(command, "grep") +
-         strcmp(command, "get")) >= 1 &&
-        num_args > 2)
+    if ((strcmp(command, "login")  == 0 || strcmp(command, "password") == 0 ||
+         strcmp(command, "cd") == 0 || strcmp(command, "mkdir") == 0 ||
+         strcmp(command, "rm") == 0 || strcmp(command, "grep") == 0 ||
+         strcmp(command, "get")== 0 )&& num_args != 2)
     {
+        strncpy(output, "This command needs exactly 1 arguments", len_output);
         return 3;
     }
-    if (strcmp(command, "put") != 0 &&
-        num_args > 3)
+    if (strcmp(command, "put") == 0  && num_args != 3)
     {
+        strncpy(output, "This command needs exactly 2 arguments", len_output);
         return 3;
     }
-    return 1;
+    return 0;
 }
