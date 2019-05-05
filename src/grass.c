@@ -230,7 +230,6 @@ void parse_conf_file(char const *filename)
 
     fclose(fp);
 }
-
 int split_args(char **args, char *line, size_t n_tok)
 {
     size_t idx = 0;
@@ -250,14 +249,14 @@ int split_args(char **args, char *line, size_t n_tok)
 int check_args(char **args, struct User* user, size_t n_args) {
     size_t idx = 0;
     const char *command = args[0];
-    int valid_token = 0;
+    int err = 0;
 
     /* Checks for invalid char */
     for (idx = 0; idx < n_args; idx++) {
-        valid_token = no_strange_char(args[idx]);
-
-        if (valid_token != 0) {
-            return valid_token;
+        err = no_strange_char(args[idx]);
+        if (err != 0)
+        {
+            return err;
         }
         idx++;
     }
@@ -335,7 +334,6 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
             (*user)->logged = true;
             return send(sock, "\0", 1, 0);
         }
-        
         return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
 
     case W:

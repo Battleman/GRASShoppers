@@ -84,3 +84,6 @@ bin/
 .idea/
 CMakeLists.txt
 cmake-build-debug/
+
+# Visual Studio Code setting folder
+.vscode
