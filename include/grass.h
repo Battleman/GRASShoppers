@@ -21,14 +21,11 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
-#define DEBUG true
-
 #define SIZE_BUFFER 1024
 #define SIZE_ARGS 16
 #define SIZE_USERS 16
 
 #define TOKENS_DELIM " \t\r\n"
-#define NUM_ALLOWED_COMMANDS 15
 
 enum ConfigID {
     BASE, PORT, USER

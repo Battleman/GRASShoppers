@@ -10,8 +10,6 @@
 
 #define PORT_FILE_LOADING 7777
 
-#define MAX_CLIENTS 16
-
 #define MSG_WELCOME "Welcome to GRASShoppersh!\n"
 
 #define ERR_UNKNOWN "Execution failed: Unrecognized command\n"

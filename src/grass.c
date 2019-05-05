@@ -216,7 +216,7 @@ void parse_conf_file(char const *filename)
         exit(EXIT_FAILURE);
     }
 
-    users = mmap(NULL, MAX_CLIENTS*sizeof(struct User), PROT_READ | PROT_WRITE,
+    users = mmap(NULL, SIZE_USERS*sizeof(struct User), PROT_READ | PROT_WRITE,
                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     while (fgets(buffer, SIZE_BUFFER, fp))
@@ -402,8 +402,8 @@ int execute(char **args, size_t idx, struct User **user, int sock)
         /* Checks all users if logged */
         for (i = 0, valread = 0; i < n_users; ++i) {
             if (users[i].logged) {
-                snprintf(buffer, "%s\n", users[i].name);
-                buffer[SIZE_BUFFER-1] = '\0';
+                strncpy(buffer, users[i].name, SIZE_BUFFER-2);
+                strcat(buffer, "\n");
                 valread += send(sock, buffer, strlen(buffer), 0);
             }
         }
