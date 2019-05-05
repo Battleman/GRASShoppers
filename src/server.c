@@ -5,6 +5,7 @@
  *      Author: Aymeric Genêt
  */
 
+#define _GNU_SOURCE 1
 #include "connect.h"
 #include "grass.h"
 #include "server.h"
@@ -12,12 +13,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #include <sys/mman.h>
 
 extern int port;
-extern struct User **users;
+extern int max_users;
+extern struct User *users;
 
 
 
@@ -69,9 +71,6 @@ static int shell_loop(int sock) {
 int main(void) {
     int sock = 0;
 
-    users = mmap(NULL, sizeof(struct User*), PROT_READ | PROT_WRITE,
-                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
     /* Initializes server */
     parse_conf_file(FILENAME_CONFIG);
 
@@ -82,11 +81,10 @@ int main(void) {
         // if (fork() == 0) {
             printf("Client accepted.\n");
             return shell_loop(sock);
-        // }
-    } while (1);
+    } while (sock != -1);
 
-    free(*users);
-    munmap(users, sizeof(struct User*));
+    /* Cleans up */
+    munmap(users, max_users*sizeof(struct User));
 
     return 0;
 }
