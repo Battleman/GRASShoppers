@@ -165,13 +165,19 @@ static int send_command(char * buffer, struct pollfd pfd) {
 
 /* ================================= MAIN =================================== */
 
-int main(void) {
+int main(int argc, char **argv) {
     char buffer[SIZE_BUFFER] = {0};
     int sock = 0, valread = 0;
     struct pollfd pfd;
 
+    /* Handles arguments */
+    if (argc != 3) {
+        printf("Usage: %s [HOST] [PORT]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     /* Connects to server */
-    if ((sock = connect_sock(IP_ADDR, PORT)) == -1) {
+    if ((sock = connect_sock(argv[1], atoi(argv[2]))) == -1) {
         exit(EXIT_FAILURE);
     }
     pfd.fd = sock;
