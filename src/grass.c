@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 1
 #include "grass.h"
 #include "server.h"
 #include "connect.h"
@@ -6,10 +7,11 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include <poll.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 /* ============================ GLOBAL VARIABLES ============================ */
 #define SIZE_CONF_VARS 3
@@ -43,7 +45,7 @@ const char *CHARACTERS_INVALID = "|;&$()/*#<>=!+%";
 const char base[SIZE_BUFFER];
 const int port;
 
-struct User **users;
+struct User *users;
 size_t n_users = 0;
 size_t max_users = SIZE_USERS;
 
@@ -74,11 +76,12 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
     case USER:
         if (n_users < max_users) {
             strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
-            sscanf(line, format, (*users)[n_users].name, (*users)[n_users].pass);
+            sscanf(line, format, users[n_users].name, users[n_users].pass);
             n_users++;
         } else {
+            users = mremap(users, max_users*sizeof(struct User), 2*max_users*sizeof(struct User),
+                           MREMAP_MAYMOVE);
             max_users *= 2;
-            *users = realloc(*users, max_users*sizeof(struct User));
         }
         break;
     default:
@@ -206,7 +209,8 @@ void parse_conf_file(char const *filename)
         exit(EXIT_FAILURE);
     }
 
-    *users = calloc(max_users, sizeof(struct User));
+    users = mmap(NULL, MAX_CLIENTS*sizeof(struct User), PROT_READ | PROT_WRITE,
+                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     while (fgets(buffer, SIZE_BUFFER, fp))
     {
@@ -312,8 +316,8 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
 
         /* Checks if user exists and prepares struct */
         for (i = 0; i < n_users; ++i) {
-            if (strcmp((*users)[i].name, args[1]) == 0 && !((*users)[i].logged)) {
-                (*user) = &((*users)[i]);
+            if (strcmp(users[i].name, args[1]) == 0 && !(users[i].logged)) {
+                (*user) = &(users[i]);
                 return send(sock, "\0", 1, 0);
             }
         }
@@ -333,11 +337,14 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
         }
         
         return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
+
     case W:
         /* Checks all users if logged */
         for (i = 0, valread = 0; i < n_users; ++i) {
-            if ((*users)[i].logged) {
-                valread += send(sock, (*users)[i].name, strlen((*users)[i].name), 0);
+            if (users[i].logged) {
+                snprintf(buffer, "%s\n", users[i].name);
+                buffer[SIZE_BUFFER-1] = '\0';
+                valread += send(sock, buffer, strlen(buffer), 0);
             }
         }
 
@@ -346,10 +353,12 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
         }
 
         return valread;
+
     case LOGOUT:
         (*user)->logged = false;
 
         return send(sock, "\0", 1, 0);
+
     case SERV_GET:
         /* Blocks if serv_get_thread exists. */
         if (serv_get_thread == NULL) {
@@ -413,6 +422,7 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
     case RM:
     case DATE:
         return launch(args, sock);
+
     case WHOAMI:
         return send(sock, (*user)->name, strlen((*user)->name), 0);
 
