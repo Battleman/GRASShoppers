@@ -12,46 +12,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
 
 extern int port;
+extern struct User **users;
 
 
-static void *server_get(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
 
-    fload->sock = accept_sock(port);
-
-    send_file(fload);
-    close(fload->sock);
-
-    free(fload);
-    return NULL;
-}
-
-static void *server_put(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
-
-    fload->sock = accept_sock(port);
-
-    recv_file(fload);
-    close(fload->sock);
-
-    free(fload);
-    return NULL;
-}
-
-static void *main_loop(void* args) {
-    int sock = *((int *)args), valread, num_args = 0;
+static int shell_loop(int sock) {
+    int valread = 0, n_args = 0;
+    int idx = -1;
     char buffer[SIZE_BUFFER] = {0};
     char **cmd;
+    struct User *user = NULL;
 
     if ((cmd = calloc(SIZE_ARGS, sizeof(char*))) == NULL) {
         close(sock);
-        return NULL;
+        return 1;
     }
 
     /* Sends welcome message */
-    send(sock, MSG_WELCOME, MSG_WELCOME_LEN, 0);
+    send(sock, MSG_WELCOME, strlen(MSG_WELCOME), 0);
 
     /* First read */
     valread = read(sock, buffer, SIZE_BUFFER);
@@ -60,11 +43,13 @@ static void *main_loop(void* args) {
         printf("%s\n", buffer);
 
         /* Tokenizes the line into arguments */
-        num_args = split_args(cmd, buffer, SIZE_ARGS);
-        check_args(cmd, buffer, num_args);
-        /* Sends command output */
-        launch(buffer, SIZE_BUFFER, cmd);
-        send(sock, buffer, SIZE_BUFFER, 0);
+        n_args = split_args(cmd, buffer, SIZE_ARGS);
+
+        /* Parses command line */
+        idx = check_args(cmd, user,n_args);
+
+        /* Executes parsed command */
+        valread = execute(cmd, idx, &user, sock);
 
         /* Loops over */
         memset(buffer, 0, SIZE_BUFFER);
@@ -72,38 +57,37 @@ static void *main_loop(void* args) {
     }
 
     /* Cleans up */
+    if (user != NULL) {
+        user->logged = false;
+    }
     free(cmd);
     close(sock);
 
-    return NULL;
+    return 0;
 }
 
 int main(void) {
-    pthread_t clients[MAX_CLIENTS];
-    int *socks;
-    size_t i = 0;
+    int sock = 0;
 
-    if ((socks = calloc(MAX_CLIENTS, sizeof(int))) == NULL) {
-        exit(EXIT_FAILURE);
-    }
+    users = mmap(NULL, sizeof(struct User*), PROT_READ | PROT_WRITE, 
+                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     /* Initializes server */
     parse_conf_file(FILENAME_CONFIG);
 
-    /* Creates socket and launches independent thread */
-    for (i = 0; i < MAX_CLIENTS; ++i) {
-        socks[i] = accept_sock(port);
-        printf("Client accepted.\n");
-        pthread_create(&(clients[i]), NULL, main_loop, &(socks[i]));
-    }
+    /* Creates socket and launches independent processes */
+    do {
+        sock = accept_sock(port);
 
-    /* Waits on each of them */
-    for (i = 0; i < MAX_CLIENTS; ++i) {
-        pthread_join(clients[i], NULL);
-    }
+        if (fork() == 0) {
+            printf("Client accepted.\n");
+            return shell_loop(sock);
+        }
+    } while (1);
 
-    /* Cleans up */
-    free(socks);
+    free(*users);
+    munmap(users, sizeof(struct User*));
 
     return 0;
 }
+

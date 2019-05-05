@@ -8,10 +8,17 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#define PORT_FILE_LOADING 7777
+
 #define MAX_CLIENTS 16
 
 #define MSG_WELCOME "Welcome to GRASShoppersh!\n"
-#define MSG_WELCOME_LEN 26
+
+#define ERR_UNKNOWN "Execution failed: Unrecognized command\n"
+#define ERR_INVALID "Execution failed: Invalid character detected\n"
+#define ERR_PARAMS "Execution failed: Incorrect number of parameters\n"
+#define ERR_FAILED "Execution failed: Wrong parameters\n"
+#define ERR_UNAUTHORIZED "Execution failed: Unauthorized\n"
 
 #define FILENAME_CONFIG "grass.conf"
 

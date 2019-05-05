@@ -29,35 +29,36 @@
 
 #define TOKENS_DELIM " \t\r\n"
 
-enum ConfigID
-{
-    BASE,
-    PORT,
-    USER
+enum ConfigID {
+    BASE, PORT, USER
 };
 
-struct ConfigVar
-{
+struct ConfigVar {
     const char *keyword;
     const enum ConfigID id;
 };
 
-struct User
-{
+struct User {
     const char name[SIZE_BUFFER];
     const char pass[SIZE_BUFFER];
 
-    bool isLoggedIn;
+    bool logged;
 };
 
-struct Command
-{
-    const char *cname;
-    const char *cmd;
-    const char *params;
+enum ServerCommandID {
+    LS, LOGIN, PASS, PING, CD, MKDIR, RM, SERV_GET, SERV_PUT, GREP, DATE,
+    WHOAMI, W, LOGOUT, SERV_EXIT,
+
+    SERV_CMD_ERR_UNKNOWN=-1, SERV_CMD_ERR_PARAMS=-2, SERV_CMD_ERR_INVALID=-3,
+    SERV_CMD_ERR_UNAUTHORIZED=-4
 };
 
-#define NUM_ALLOWED_COMMANDS 15
+struct ServerCommand {
+    const char *keyword;
+    const enum ServerCommandID id;
+    const unsigned char n_params;
+    const bool privileged;
+};
 
 void hijack_flow(void);
 
@@ -85,26 +86,43 @@ void parse_conf_file(char const *filename);
 int split_args(char **args, char *line, size_t n_tok);
 
 /*
- * Executes parsed line and transfers its output and return status.
+ * Executes indexed command and transfers output to socket.
  *
- * @parameter output
- *   Placeholder array pre-initialized with output_len elements that will
- *   contain the output of executed command.
- * @parameter output_len
- *   Available length of output string.
- * @parameter cmd
+ * @parameter args
  *   Command and arguments to execute.
+ * @parameter idx
+ *   Index of the command to execute.
+ * @parameter user
+ *   Pointer to the struct of the current user (or NULL if not logged).
+ * @parameter sock
+ *   Socket to which the output needs to be sent.
  *
  * @return
- *   Return status of the command executed.
+ *   Number of bytes successfully sent.
  */
 
-int launch(char *output, int output_len, char **cmd);
+int execute(char **args, size_t idx, struct User **user, int sock);
 
 /*
+ * Checks correctness and authorization of command and arguments.
+ *
+ * @parameter args
+ *   Tokenized array (with split_args) containing:
+ *      args[0]:      Command to be executed.
+ *      args[1+]:     Arguments to command.
+ *      args[n_args]: NULL (literal).
+ * @parameter user
+ *    Pointer to the struct of the current user (or NULL if not logged).
+ * @parameter n_args
+ *    Number of tokens contained in args.
+ *
+ * @return
+ *   Index of the command to be executed or a negative error value:
+ *      -1:           Command is not recognized,
+ *      -2:           Number of arguments does not match.
+ *      -3:           Tokens contain invalid characters.
+ */
 
-*/
-int check_args(char **args, char *line, size_t num_args);
+int check_args(char **args, struct User* user, size_t n_args);
 
-int no_strange_char(char *check_string);
 #endif /* GRASS_H */

@@ -154,7 +154,7 @@ static int send_command(char * buffer, struct pollfd pfd) {
         }
     }
 
-    /* Any command */
+    /* Any other command */
     valread = send(pfd.fd, buffer, SIZE_BUFFER, 0);
     PRINT_EXHAUSTIVE_READ(valread, buffer, SIZE_BUFFER, pfd);
 

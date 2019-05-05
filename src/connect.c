@@ -44,8 +44,8 @@ int accept_sock(int port) {
         return -1;
     }
 
-    /* Listens for socket connections and limits to 3 connections */
-    if (listen(server_fd, 3) < 0) {
+    /* Listens for socket connections and limits to 16 connections */
+    if (listen(server_fd, 16) < 0) {
         perror("Socket listen failed");
         return -1;
     }
