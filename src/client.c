@@ -35,8 +35,8 @@ static const struct ClientCommand cli_cmd[SIZE_CLIENT_COMMANDS] = {
     {"exit", EXIT}
 };
 
-pthread_t *get_thread = NULL;
-pthread_t *put_thread = NULL;
+pthread_t *cli_get_thread = NULL;
+pthread_t *cli_put_thread = NULL;
 
 /* =============================== FUNCTIONS ================================ */
 
@@ -78,11 +78,11 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
     strcat(format, cmd.keyword);
     switch (cmd.id) {
         case GET:
-            /* Blocks if get_thread exists. */
-            if (get_thread == NULL) {
-                get_thread = malloc(sizeof(pthread_t));
+            /* Blocks if cli_get_thread exists. */
+            if (cli_get_thread == NULL) {
+                cli_get_thread = malloc(sizeof(pthread_t));
             } else {
-                pthread_join(*get_thread, NULL);
+                pthread_join(*cli_get_thread, NULL);
             }
 
             /* Sends command */
@@ -91,8 +91,8 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
 
             if (valread <= 0) {
                 /* Cleans up */
-                free(get_thread);
-                get_thread = NULL;
+                free(cli_get_thread);
+                cli_get_thread = NULL;
                 return valread;
             }
 
@@ -104,15 +104,16 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
             sscanf(output, "get port: %d size: %lu", &(fload->port), &(fload->size));
             get_ip(fload->ipv4_addr, 16, pfd.fd);
 
-            pthread_create(get_thread, NULL, client_get, fload);
+            pthread_create(cli_get_thread, NULL, client_get, fload);
 
             return valread;
+
         case PUT:
-            /* Blocks if get_thread exists. */
-            if (put_thread == NULL) {
-                put_thread = malloc(sizeof(pthread_t));
+            /* Blocks if cli_get_thread exists. */
+            if (cli_put_thread == NULL) {
+                cli_put_thread = malloc(sizeof(pthread_t));
             } else {
-                pthread_join(*put_thread, NULL);
+                pthread_join(*cli_put_thread, NULL);
             }
 
             /* Sends command */
@@ -121,8 +122,8 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
 
             if (valread <= 0) {
                 /* Cleans up */
-                free(put_thread);
-                put_thread = NULL;
+                free(cli_put_thread);
+                cli_put_thread = NULL;
                 return valread;
             }
 
@@ -134,11 +135,12 @@ static int client_parse_command(char const * command, struct ClientCommand cmd, 
             sscanf(output, "put port: %d", &(fload->port));
             get_ip(fload->ipv4_addr, 16, pfd.fd);
 
-            pthread_create(put_thread, NULL, client_put, fload);
+            pthread_create(cli_put_thread, NULL, client_put, fload);
 
             return valread;
         case EXIT:
         default:
+            send(pfd.fd, "exit", 6, 0);
             return -1;
     }
 }
@@ -189,10 +191,15 @@ int main(void) {
     }
 
     /* Cleans up */
-    if (get_thread != NULL) {
-        pthread_join(*get_thread, NULL);
-        free(get_thread);
-        get_thread = NULL;
+    if (cli_get_thread != NULL) {
+        pthread_join(*cli_get_thread, NULL);
+        free(cli_get_thread);
+        cli_get_thread = NULL;
+    }
+    if (cli_put_thread != NULL) {
+        pthread_join(*cli_put_thread, NULL);
+        free(cli_put_thread);
+        cli_put_thread = NULL;
     }
     close(sock);
 
