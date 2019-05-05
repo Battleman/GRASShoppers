@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -16,8 +17,7 @@
 static const struct ConfigVar CONF_VARS[SIZE_CONF_VARS] = {
     {"base", BASE},
     {"port", PORT},
-    {"user", USER}
-};
+    {"user", USER}};
 
 #define SIZE_SERVER_COMMANDS 15
 static const struct ServerCommand SERV_CMD[SIZE_SERVER_COMMANDS] = {
@@ -35,10 +35,9 @@ static const struct ServerCommand SERV_CMD[SIZE_SERVER_COMMANDS] = {
     {"whoami", WHOAMI, 1, true},
     {"w", W, 1, true},
     {"logout", LOGOUT, 1, true},
-    {"exit", SERV_EXIT, 1, false}
-};
+    {"exit", SERV_EXIT, 1, false}};
 
-const char *CHARACTERS_INVALID = "|;&$()/*#<>=!+%";
+const char *CHARACTERS_INVALID = "|&$()/*#<>=!+%";
 
 const char base[SIZE_BUFFER];
 const int port;
@@ -63,7 +62,8 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
     case BASE:
         strcat(format, " %1023[A-Za-z0-9 ./\\-_]");
         sscanf(line, format, base);
-        if (chdir(base) != 0) {
+        if (chdir(base) != 0)
+        {
             perror("Failed changing directory to base folder.");
         }
         break;
@@ -72,13 +72,16 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
         sscanf(line, format, &port);
         break;
     case USER:
-        if (n_users < max_users) {
+        if (n_users < max_users)
+        {
             strcat(format, " %1023[A-Za-z0-9_] %1023[ -~]\n");
             sscanf(line, format, (*users)[n_users].name, (*users)[n_users].pass);
             n_users++;
-        } else {
+        }
+        else
+        {
             max_users *= 2;
-            *users = realloc(*users, max_users*sizeof(struct User));
+            *users = realloc(*users, max_users * sizeof(struct User));
         }
         break;
     default:
@@ -86,7 +89,8 @@ static void parse_conf_var(char *line, struct ConfigVar conf)
     }
 }
 
-static int launch(char **cmd, int sock) {
+static int launch(char **cmd, int sock)
+{
     char buffer[SIZE_BUFFER] = {0};
     pid_t pid = 0;
     int valread = 1;
@@ -138,7 +142,7 @@ static int launch(char **cmd, int sock) {
         buffer[SIZE_BUFFER - 1] = '\0';
         while (valread > 0 && poll(&pfd, 1, 0) > 0)
         {
-            valread = read(comm[0], buffer, SIZE_BUFFER-1);
+            valread = read(comm[0], buffer, SIZE_BUFFER - 1);
             valread = send(sock, buffer, valread, 0);
         }
 
@@ -149,11 +153,14 @@ static int launch(char **cmd, int sock) {
     return valread;
 }
 
-static int no_strange_char(char const *check_str) {
+static int no_strange_char(char const *check_str)
+{
     char const *c = check_str;
 
-    while (*c) {
-        if (strchr(CHARACTERS_INVALID, *c)) {
+    while (*c)
+    {
+        if (strchr(CHARACTERS_INVALID, *c))
+        {
             return SERV_CMD_ERR_INVALID;
         }
         c++;
@@ -162,8 +169,9 @@ static int no_strange_char(char const *check_str) {
     return 0;
 }
 
-static void *server_get(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
+static void *server_get(void *args)
+{
+    struct FileLoading *fload = (struct FileLoading *)args;
 
     fload->sock = accept_sock(port);
 
@@ -174,8 +182,9 @@ static void *server_get(void* args) {
     return NULL;
 }
 
-static void *server_put(void* args) {
-    struct FileLoading* fload = (struct FileLoading*) args;
+static void *server_put(void *args)
+{
+    struct FileLoading *fload = (struct FileLoading *)args;
 
     fload->sock = accept_sock(port);
 
@@ -242,13 +251,15 @@ int split_args(char **args, char *line, size_t n_tok)
     return idx;
 }
 
-int check_args(char **args, struct User* user, size_t n_args) {
+int check_args(char **args, struct User *user, size_t n_args)
+{
     size_t idx = 0;
     const char *command = args[0];
     int err = 0;
 
     /* Checks for invalid char */
-    for (idx = 0; idx < n_args; idx++) {
+    for (idx = 0; idx < n_args; idx++)
+    {
         err = no_strange_char(args[idx]);
         if (err != 0)
         {
@@ -258,14 +269,20 @@ int check_args(char **args, struct User* user, size_t n_args) {
     }
 
     /* Checks for invalid command */
-    for (idx = 0; idx < SIZE_SERVER_COMMANDS; idx++) {
-        if (strcmp(command, SERV_CMD[idx].keyword) == 0) {
-            if (n_args == SERV_CMD[idx].n_params) {
-                if (SERV_CMD[idx].privileged && (user == NULL || !user->logged)) {
+    for (idx = 0; idx < SIZE_SERVER_COMMANDS; idx++)
+    {
+        if (strcmp(command, SERV_CMD[idx].keyword) == 0)
+        {
+            if (n_args == SERV_CMD[idx].n_params)
+            {
+                if (SERV_CMD[idx].privileged && (user == NULL || !user->logged))
+                {
                     return SERV_CMD_ERR_UNAUTHORIZED; /* Unauthorized command */
                 }
-                return idx; /* Correct command and aguments */
-            } else {
+                return idx; /* Correct command and arguments */
+            }
+            else
+            {
                 return SERV_CMD_ERR_PARAMS; /* Invalid number of arguments */
             }
         }
@@ -274,22 +291,66 @@ int check_args(char **args, struct User* user, size_t n_args) {
     return SERV_CMD_ERR_UNKNOWN; /* Invalid command */
 }
 
-int execute(char **args, size_t idx, struct User **user, int sock) {
+int get_all_filenames(char **all_filenames, char *directory, size_t max_filenames)
+{
+    struct dirent *in_file;
+    size_t counter = 0;
+    DIR *FD = opendir(directory);
+    if (FD == NULL)
+    {
+        return 0;
+    }
+
+    while ((in_file = readdir(FD)) && counter < max_filenames)
+    {
+        if (!strcmp(in_file->d_name, "."))
+            continue;
+        if (!strcmp(in_file->d_name, ".."))
+            continue;
+        all_filenames[counter] = calloc(strlen(in_file->d_name) + strlen(directory) + 1, sizeof(char *));
+        strcpy(all_filenames[counter], in_file->d_name);
+        counter++;
+    }
+    return counter;
+}
+
+int execute(char **args, size_t idx, struct User **user, int sock)
+{
+    printf("Executing...\n");
+    fflush(stdout);
     char buffer[SIZE_BUFFER] = {0};
     struct FileLoading *fload = NULL;
     struct stat st;
     size_t i = 0;
+    size_t num_files = 0;
+    int output = 0;
     int valread = 0;
+    char **all_filenames = calloc(300, sizeof(char *));
 
-    switch (idx) {
+    switch (idx)
+    {
     case GREP:
+        num_files = get_all_filenames(all_filenames, ".", 300);
+        if (num_files == 0)
+        {
+            return 0;
+        }
         /* Hacks command to match output */
+        args[0] = "grep";
+        // args[1] = pattern
         args[2] = "-d";
         args[3] = "skip";
-        args[4] = "-l";
-        args[5] = "*";
-        args[6] = NULL;
-        return launch(args, sock);
+        args[4] = "-lnr";
+        for (i = 0; i < num_files; i++)
+        {
+            args[i + 5] = all_filenames[i];
+        }
+        args[i + 5] = NULL;
+        output = launch(args, sock);
+        for(i=0; i < num_files; i++)
+            free(all_filenames[i]);
+        free(all_filenames);
+        return output;
 
     case LS:
         /* Hacks command to match output */
@@ -305,13 +366,16 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
 
     case LOGIN:
         /* Fails if already logged in */
-        if ((*user) != NULL && (*user)->logged) {
+        if ((*user) != NULL && (*user)->logged)
+        {
             return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
         }
 
         /* Checks if user exists and prepares struct */
-        for (i = 0; i < n_users; ++i) {
-            if (strcmp((*users)[i].name, args[1]) == 0 && !((*users)[i].logged)) {
+        for (i = 0; i < n_users; ++i)
+        {
+            if (strcmp((*users)[i].name, args[1]) == 0 && !((*users)[i].logged))
+            {
                 (*user) = &((*users)[i]);
                 return send(sock, "\0", 1, 0);
             }
@@ -321,25 +385,30 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
 
     case PASS:
         /* Fails if already logged in */
-        if ((*user) != NULL && (*user)->logged) {
+        if ((*user) != NULL && (*user)->logged)
+        {
             return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
         }
 
         /* Checks password */
-        if (strcmp((*user)->pass, args[1]) == 0) {
+        if (strcmp((*user)->pass, args[1]) == 0)
+        {
             (*user)->logged = true;
             return send(sock, "\0", 1, 0);
         }
         return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
     case W:
         /* Checks all users if logged */
-        for (i = 0, valread = 0; i < n_users; ++i) {
-            if ((*users)[i].logged) {
+        for (i = 0, valread = 0; i < n_users; ++i)
+        {
+            if ((*users)[i].logged)
+            {
                 valread += send(sock, (*users)[i].name, strlen((*users)[i].name), 0);
             }
         }
 
-        if (valread == 0) {
+        if (valread == 0)
+        {
             return send(sock, "\0", 1, 0);
         }
 
@@ -350,14 +419,18 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
         return send(sock, "\0", 1, 0);
     case SERV_GET:
         /* Blocks if serv_get_thread exists. */
-        if (serv_get_thread == NULL) {
+        if (serv_get_thread == NULL)
+        {
             serv_get_thread = malloc(sizeof(pthread_t));
-        } else {
+        }
+        else
+        {
             pthread_join(*serv_get_thread, NULL);
         }
 
         /* Checks that file exists and recovers its size */
-        if (stat(args[1], &st) != 0) {
+        if (stat(args[1], &st) != 0)
+        {
             free(serv_get_thread);
             serv_get_thread = NULL;
             return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
@@ -365,44 +438,48 @@ int execute(char **args, size_t idx, struct User **user, int sock) {
 
         /* Prepares thread */
         fload = malloc(sizeof(struct FileLoading));
-        strncpy(fload->filename, args[1], SIZE_BUFFER-1);
-        fload->filename[SIZE_BUFFER-1] = '\0';
+        strncpy(fload->filename, args[1], SIZE_BUFFER - 1);
+        fload->filename[SIZE_BUFFER - 1] = '\0';
         fload->port = PORT_FILE_LOADING;
         fload->size = st.st_size;
 
         pthread_create(serv_get_thread, NULL, server_get, fload);
 
         /* Prepares response */
-        snprintf(buffer, SIZE_BUFFER-1, "get port: %d size: %lu", fload->port, fload->size);
-        buffer[SIZE_BUFFER-1] = '\0';
+        snprintf(buffer, SIZE_BUFFER - 1, "get port: %d size: %lu", fload->port, fload->size);
+        buffer[SIZE_BUFFER - 1] = '\0';
 
         return send(sock, buffer, strlen(buffer), 0);
 
     case SERV_PUT:
         /* Blocks if serv_put_thread exists. */
-        if (serv_put_thread == NULL) {
+        if (serv_put_thread == NULL)
+        {
             serv_put_thread = malloc(sizeof(pthread_t));
-        } else {
+        }
+        else
+        {
             pthread_join(*serv_put_thread, NULL);
         }
 
         /* Prepares thread */
         fload = malloc(sizeof(struct FileLoading));
-        strncpy(fload->filename, args[1], SIZE_BUFFER-1);
-        fload->filename[SIZE_BUFFER-1] = '\0';
+        strncpy(fload->filename, args[1], SIZE_BUFFER - 1);
+        fload->filename[SIZE_BUFFER - 1] = '\0';
         fload->port = PORT_FILE_LOADING;
         fload->size = strtoul(args[2], NULL, 10);
 
         pthread_create(serv_put_thread, NULL, server_put, fload);
 
         /* Prepares response */
-        snprintf(buffer, SIZE_BUFFER-1, "put port: %d", fload->port);
-        buffer[SIZE_BUFFER-1] = '\0';
+        snprintf(buffer, SIZE_BUFFER - 1, "put port: %d", fload->port);
+        buffer[SIZE_BUFFER - 1] = '\0';
 
         return send(sock, buffer, strlen(buffer), 0);
 
     case CD:
-        if (chdir(args[1]) != 0) {
+        if (chdir(args[1]) != 0)
+        {
             return send(sock, ERR_FAILED, strlen(ERR_FAILED), 0);
         }
         return send(sock, "\0", 1, 0);

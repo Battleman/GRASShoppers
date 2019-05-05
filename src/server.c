@@ -79,10 +79,10 @@ int main(void) {
     do {
         sock = accept_sock(port);
 
-        if (fork() == 0) {
+        // if (fork() == 0) {
             printf("Client accepted.\n");
             return shell_loop(sock);
-        }
+        // }
     } while (1);
 
     free(*users);
